@@ -6,8 +6,8 @@ Produto próprio da Luh Panda (nome comercial: **aprovi.ai**, ex-"Posta Aí"): p
 onde o cliente aprova (ou pede ajuste em) cada criativo antes de ir pro ar, sem
 WhatsApp bagunçado nem print perdido. Nasceu do projeto da Gigi (Lymphatic by Gigi),
 mas foi desenhado desde a primeira tabela pra aguentar dezenas de clientes e, no
-futuro, ser vendido pra outras agências. Meta: subir num domínio próprio sob
-luhpanda.com.br quando estiver pronto — a URL do GitHub Pages abaixo é provisória.
+futuro, ser vendido pra outras agências. Hospedado em domínio próprio desde
+24/ago/2026 — ver URL publicada abaixo.
 
 **Nota técnica:** o rename foi só de marca/nome visível. Por baixo, Supabase ainda
 usa os nomes antigos (`posta_ai` como schema, funções `posta_ai_*`, bucket
@@ -18,7 +18,13 @@ migração de banco em produção sem necessidade real. Não renomear isso sem m
 
 - **Repo local:** `/Users/luhpanda/Downloads/Luh Panda/aprovi-ai`
 - **Remote:** `https://github.com/lucianapandolfo9-spec/aprovi-ai` (branch `main`, **repo público** — necessário pro GitHub Pages grátis; seguro porque a chave anon do Supabase é feita pra ficar exposta, e todo acesso passa por RLS + funções travadas, nunca pela chave)
-- **URL publicada:** https://lucianapandolfo9-spec.github.io/aprovi-ai/ (provisória — vai migrar pra domínio próprio)
+- **URL publicada:** https://luhpanda.online/ (domínio próprio, HTTPS forçado, cert válido até
+  22/11/2026). Link antigo `lucianapandolfo9-spec.github.io/aprovi-ai/` segue funcionando —
+  redireciona sozinho pro domínio novo, não precisa reenviar link nenhum por causa disso.
+  🔴 **Esse domínio ANTES redirecionava `luhpanda.online` → `luhpanda.com.br`** (repo
+  `luhpanda-online-redirect`, código preservado lá caso precise reativar) — a partir de
+  24/ago/2026 ele hospeda o aprovi.ai direto, não redireciona mais pro site principal.
+  DNS não precisou de nenhuma mudança (já apontava pro GitHub Pages desde o redirect antigo).
   - `index.html` — painel da Luciana (login, marcas, kanban, upload, edição)
   - `cliente.html?t=<token>` — tela do cliente (link secreto por marca, sem login)
 - **Backend:** Supabase, projeto `arroba-certa` (`tscnqvuzlfagotirgjbz`) — **schema isolado `posta_ai`**, não mexe em nada do @certo. Motivo: conta free só permite 2 projetos Supabase ativos por org, já ocupados por `auditor-folha-capitalize` e `arroba-certa`.
