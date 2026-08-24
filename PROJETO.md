@@ -54,6 +54,18 @@ todo post futuro). Mesma lógica do `CTAEnd.tsx` do projeto Remotion da Gigi, ap
 **Máquina de status:**
 `rascunho → em_aprovação → aprovado | ajuste_pedido` (ajuste volta pro loop) `→ agendado → publicando → publicado | falhou`
 
+🔴 **`ajuste_pedido` é especificamente "precisa editar o vídeo" — nunca legenda**
+(homologado 24/ago/2026). Mudança só de texto **não passa por aqui**: o
+cliente edita o campo de legenda na tela dele e clica "Aprovar" — isso já
+salva a versão editada (`post_captions`, `autor='aprovador'`) **e** já muda o
+post pra `aprovado` na mesma ação, sem nenhuma intervenção do admin. O botão
+"Pedir ajuste" do `cliente.html` foi relabelado pra "🎬 Precisa editar o
+vídeo" e o campo de comentário (obrigatório nesse caminho) pede
+especificamente o que muda no vídeo. Motivo: antes o botão era genérico e
+toda solicitação — texto ou vídeo — caía como `ajuste_pedido`, obrigando a
+Luciana a ler cada comentário pra descobrir se dava pra resolver na hora ou
+se precisava editar vídeo de verdade.
+
 ## Segurança — como o acesso é controlado
 
 **Nenhuma tabela é acessível direto via API — só via funções `SECURITY DEFINER` em `public`.**
@@ -84,8 +96,10 @@ daqui pra frente, não só clicando na tela.
 3. "+ Novo conteúdo" — pode selecionar **vários arquivos de uma vez** (vira carrossel
    automaticamente), escreve o corpo da legenda, cria como rascunho.
 4. "Enviar pra aprovação" quando estiver pronto pro cliente ver.
-5. Cliente abre o link, edita legenda/assinatura se quiser, aprova ou pede ajuste
-   (com comentário).
+5. Cliente abre o link. Se só mudar a legenda, edita e clica "Aprovar" — fica
+   aprovado na hora, sem passar pelo admin. "🎬 Precisa editar o vídeo" é só
+   pra pedido que precisa de edição de vídeo de verdade (comentário
+   obrigatório descrevendo o que muda).
 6. **Botão "Abrir" em qualquer card, qualquer status** — mostra os arquivos com link
    de abrir/baixar, legenda editável (dá pra corrigir mesmo depois de aprovado),
    assinatura padrão de referência, e "Copiar legenda + assinatura" pra colar direto
@@ -100,15 +114,69 @@ conteúdo aprovado de ponta a ponta foi o recap do evento Juni Block Party.
 
 ## Roadmap — Fase 2 (publicação automática)
 
-- `social_accounts` (token cifrado, validade) + `publish_jobs` (tentativa, id externo, erro) —
-  únicas duas tabelas que faltam.
-- Cadastrar app próprio no Meta for Developers; contas de cliente entram como
-  *tester* (sem precisar de App Review enquanto for baixo volume).
-- Pré-requisito por cliente: Instagram Business/Creator vinculado a uma Página do
-  Facebook (no caso da Gigi, já é pendência existente do projeto dela no Notion —
-  serve pras duas frentes de uma vez: anúncios pagos e aprovi.ai).
-- Gatilho: mudança de status pra `aprovado` em `post_events` → webhook do Supabase
-  → função de publicação.
+🔴 **EM ANDAMENTO desde 21/08/2026 — cliente-piloto: Lymphatic by Gigi. Ver
+status vivo na skill `lymphatic-by-gigi` (seção "Estado da automação via
+API"), aqui fica só o design técnico, que não muda por sessão.**
+
+**Decisão de arquitetura (revista 23/08, substitui a linha antiga de
+"App próprio + tester"):** em vez de cadastrar app no Meta for Developers e
+adicionar cada cliente como *tester*, usar **Usuário do Sistema por
+Business Manager** — mais direto quando a agência já administra o Business
+Manager do cliente (é o caso da Gigi). Passo a passo:
+1. Business Manager do cliente precisa estar **verificado**
+   (`Configurações → Informações da empresa → Iniciar verificação`) — sem
+   isso o botão de criar Usuário do Sistema fica desabilitado. Pede dados
+   da empresa + confirmação por telefone/e-mail + documento (LLC/EIN/
+   business license/DBA) se não achar registro público automaticamente.
+2. Criar o Usuário do Sistema em Business Settings → Usuários do sistema,
+   atribuir acesso à Página e à conta do Instagram do cliente como ativos.
+3. Gerar token escolhendo **"Never" na expiração** (não os 60 dias
+   padrão), com permissões `instagram_basic`, `instagram_content_publish`,
+   `pages_show_list`, `pages_read_engagement`, `business_management`.
+   Não expira por tempo — só por revogação manual, mudança de dono do
+   ativo, ou ação de política do Meta.
+
+**Pré-requisito por cliente:** Instagram Business/Creator vinculado a uma
+Página do Facebook dentro do Business Manager. **Não presumir que falta**
+— checar primeiro (`Configurações → Contas do Instagram → aba "Ativos
+conectados"`) antes de tratar como pendência; no caso da Gigi já estava
+resolvido, só não tinha sido conferido.
+
+**Tabelas que faltam** (schema `posta_ai`, nenhuma outra muda):
+```
+social_accounts   id, brand_id, ig_user_id, page_id, access_token (cifrado),
+                  expira_em, conectado_em
+publish_jobs      id, post_id, tentativa, ig_creation_id, ig_media_id,
+                  status, erro, criado_em, publicado_em
+```
+
+**Onde roda a publicação:** aprovi.ai é site estático (GitHub Pages), não
+tem servidor próprio — quem executa é **n8n**, workflow agendado
+(a cada 5-15min).
+
+**Gatilho correto — 🔴 corrige a versão antiga deste roadmap:**
+publicar quando **`agendado_para` vence num post com status `agendado`**,
+**não** quando o post vira `aprovado`. Aprovado só significa "pode
+agendar" — não significa "é hora de postar". O n8n consulta `posts` onde
+`status='agendado' AND agendado_para <= now()` (respeitando `brands.timezone`),
+chama a Instagram Content Publishing API (`POST /{ig-user-id}/media` →
+pra vídeo, aguardar `status_code=FINISHED` → `POST /{ig-user-id}/media_publish`),
+grava resultado em `publish_jobs` e atualiza `posts.status` via função
+`SECURITY DEFINER` chamada com token de serviço do n8n (nunca a anon key
+do site).
+
+**Melhorias de produto desenhadas em paralelo (não dependem do token,
+podem ser codadas a qualquer momento):**
+1. **Legenda editável em post já aprovado** — hoje `cliente.html` só
+   mostra legenda editável em posts `em_aprovacao`/`ajuste_pedido`; posts
+   `aprovado`/`agendado` caem no Histórico só-leitura. Fix: nova função
+   `posta_ai_client_update_caption(token, post_id, legenda)` (mesmo padrão
+   de segurança de `posta_ai_client_update_signature`, não toca status) +
+   botão "✏️ Editar legenda" inline no Histórico pra esses dois status.
+   Elimina o vai-e-volta de reabrir aprovação só por causa de texto.
+2. **Aviso de vídeo sem áudio no upload** — checagem no navegador
+   (`<video>` + `audioTracks`) ao anexar arquivo em "Novo conteúdo" no
+   `index.html`. Não bloqueia, só avisa antes de mandar pra aprovação.
 
 ## Roadmap — notificação via n8n (não construído ainda, de propósito)
 

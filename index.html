@@ -29,7 +29,7 @@ function toast(msg){
   setTimeout(()=>t.remove(), 2800);
 }
 function statusLabel(s){
-  return {rascunho:'Rascunho', em_aprovacao:'Aguardando cliente', ajuste_pedido:'Ajuste pedido',
+  return {rascunho:'Rascunho', em_aprovacao:'Aguardando cliente', ajuste_pedido:'Edição de vídeo pedida',
     aprovado:'Aprovado', agendado:'Agendado', publicando:'Publicando', publicado:'Publicado', falhou:'Falhou'}[s] || s;
 }
 
@@ -157,7 +157,7 @@ async function loadPosts(){
   if(error){ kanbanEl.innerHTML = `<div class="empty">Erro: ${esc(error.message)}</div>`; return; }
 
   const cols = [
-    ['rascunho','Rascunho'], ['em_aprovacao','Aguardando cliente'], ['ajuste_pedido','Ajuste pedido'],
+    ['rascunho','Rascunho'], ['em_aprovacao','Aguardando cliente'], ['ajuste_pedido','Edição de vídeo pedida'],
     ['aprovado','Aprovado'], ['agendado','Agendado'], ['publicado','Publicado']
   ];
   const posts = data || [];

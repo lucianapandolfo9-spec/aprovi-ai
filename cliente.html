@@ -33,7 +33,7 @@ function toast(msg){
   setTimeout(()=>t.remove(), 2800);
 }
 function statusLabel(s){
-  return {rascunho:'Rascunho', em_aprovacao:'Aguardando você', ajuste_pedido:'Ajuste pedido',
+  return {rascunho:'Rascunho', em_aprovacao:'Aguardando você', ajuste_pedido:'Edição de vídeo pedida',
     aprovado:'Aprovado', agendado:'Agendado', publicando:'Publicando', publicado:'Publicado', falhou:'Falhou'}[s] || s;
 }
 
@@ -111,15 +111,16 @@ function postCard(p){
     <div class="field" style="margin-top:14px;">
       <label>Legenda desse post</label>
       <textarea class="caption-field">${esc(p.legenda_atual)}</textarea>
+      <div class="muted" style="font-size:12px;margin-top:4px;">Só mudou o texto? Edite aqui em cima e clique em Aprovar — fica aprovado na hora, não precisa pedir nada.</div>
     </div>
     ${comments ? `<div style="margin-bottom:12px;">${comments}</div>` : ''}
     <div class="field">
-      <label>Comentário (opcional)</label>
-      <textarea class="comment-field" placeholder="Ex: troca a cor do texto, corta os 2 primeiros segundos..."></textarea>
+      <label>Precisa editar o vídeo? Descreve aqui o que muda</label>
+      <textarea class="comment-field" placeholder="Ex: corta a mão que aparece no segundo 12, câmera balança no início..."></textarea>
     </div>
     <div class="row">
       <button class="btn btn-approve" onclick="decide('${p.id}','aprovado',this)">✅ Aprovar</button>
-      <button class="btn btn-adjust" onclick="decide('${p.id}','ajuste_pedido',this)">✍️ Pedir ajuste</button>
+      <button class="btn btn-adjust" onclick="decide('${p.id}','ajuste_pedido',this)">🎬 Precisa editar o vídeo</button>
     </div>
   </div>`;
 }
@@ -130,7 +131,7 @@ async function decide(postId, decisao, btn){
   const comentario = card.querySelector('.comment-field').value;
 
   if(decisao === 'ajuste_pedido' && !comentario.trim()){
-    toast('Escreve o que quer ajustar no campo de comentário.');
+    toast('Descreve o que precisa mudar no vídeo.');
     return;
   }
 
@@ -144,7 +145,7 @@ async function decide(postId, decisao, btn){
     card.querySelectorAll('button').forEach(b => b.disabled = false);
     return;
   }
-  toast(decisao === 'aprovado' ? 'Aprovado!' : 'Ajuste enviado pra Luciana.');
+  toast(decisao === 'aprovado' ? 'Aprovado!' : 'Pedido de edição enviado pra Luciana.');
   loadFeed();
 }
 
