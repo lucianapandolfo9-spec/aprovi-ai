@@ -155,8 +155,11 @@ function confirmDeleteBrand(){
       <h3 style="margin-top:0;">Excluir "${esc(b.nome)}"?</h3>
       <p class="muted">Apaga a marca inteira: todos os posts, arquivos, legendas, comentários,
         histórico e a conexão com o Instagram. <b>Não dá pra desfazer.</b></p>
-      <div class="field"><label>Digita <b>${esc(b.nome)}</b> pra confirmar</label>
-        <input id="db-confirm" type="text" placeholder="${esc(b.nome)}"></div>
+      <div class="field">
+        <label>Digita o nome da marca pra confirmar</label>
+        <p style="text-transform:none;font-weight:700;margin:0 0 8px;">${esc(b.nome)}</p>
+        <input id="db-confirm" type="text" placeholder="${esc(b.nome)}">
+      </div>
       <div class="row" style="justify-content:flex-end;">
         <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
         <button class="btn" style="background:var(--vermelho);color:#fff;" onclick="doDeleteBrand()">Excluir marca</button>
@@ -168,7 +171,7 @@ function confirmDeleteBrand(){
 async function doDeleteBrand(){
   const b = currentBrand;
   const typed = document.getElementById('db-confirm').value.trim();
-  if(typed !== b.nome){ toast('O nome digitado não bate — nada foi apagado.'); return; }
+  if(typed.toLowerCase() !== b.nome.trim().toLowerCase()){ toast('O nome digitado não bate — nada foi apagado.'); return; }
 
   const { data: assetUrls, error: listErr } = await postaAiClient.rpc('posta_ai_admin_list_brand_asset_urls', { p_brand_id: b.id });
   if(listErr){ toast('Erro ao listar arquivos: '+listErr.message); return; }
