@@ -234,6 +234,20 @@ não arquivamento — ela pediu "excluído do sistema", e é isso que faz.
   preenchidos) antes de expor na tela: zero resíduo após o delete, marcas reais
   (Luh Panda, Lymphatic by Gigi) confirmadas intactas.
 
+🔴 **Bug real, corrigido no mesmo dia:** o nome da marca no modal de confirmação
+ficava dentro de um `<label>`, e **todo `label` do painel tem `text-transform:
+uppercase` no CSS global** — então "Idealize Grafica" aparecia visualmente como
+"IDEALIZE GRAFICA". A Luh digitou exatamente o que viu na tela (certo, do ponto
+de vista dela) e a exclusão travou, porque a comparação no JS (`typed !==
+b.nome`) é sensível a maiúscula/minúscula. **Lição: qualquer texto que o usuário
+precisa copiar exatamente (confirmação, token, nome pra digitar de volta) não
+pode ficar dentro de um elemento com `text-transform` herdado — sempre conferir
+o CSS global antes de assumir que "o texto que tá na tela" é o texto real.**
+Corrigido em duas camadas: (1) nome exibido num `<p style="text-transform:
+none">` separado do label, mostrando a grafia real; (2) comparação virou
+case-insensitive (`toLowerCase()` dos dois lados) como rede de segurança, pra
+não depender só do CSS estar certo daqui pra frente.
+
 ## Publicação automática cobre os 4 formatos (confirmado 10/set/2026)
 
 Reforçando o que já está na seção "Contas conectadas" acima, pra não ficar só
