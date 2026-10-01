@@ -1,0 +1,14 @@
+-- O seed do aprovi.ai NÃO fica aqui.
+--
+-- `supabase/seed.sql` só é aplicado por `supabase start` (stack local via
+-- Docker). Ele NÃO roda em `supabase db push` contra um projeto remoto — e a
+-- réplica do aprovi.ai é um projeto remoto.
+--
+-- Por isso a semente vive como migration numerada:
+--
+--     supabase/migrations/90000000000000_semente_demo.sql
+--
+-- O prefixo 9 garante que ela é sempre a última a ser aplicada, e o
+-- `db push` a leva junto sem precisar de ninguém colando SQL em painel.
+--
+-- Este arquivo existe só pra você não procurar.

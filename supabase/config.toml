@@ -1,0 +1,25 @@
+# aprovi.ai — configuração do Supabase CLI
+#
+# project_id é o nome local do projeto, não o ref remoto. O ref vem do
+# `supabase link --project-ref <REF>`, que grava em supabase/.temp/
+# (ignorado pelo git de propósito — cada clone aponta pro seu próprio projeto).
+project_id = "aprovi-ai"
+
+# ---------------------------------------------------------------------
+# EDGE FUNCTIONS
+# ---------------------------------------------------------------------
+# verify_jwt declarado AQUI, não na linha de comando do `functions deploy`.
+# Motivo: a flag na CLI sobrescreve e os dois valores divergem silenciosamente
+# — a função fica aberta ou fica dando 401, e ninguém sabe qual é o certo.
+# Os valores abaixo foram lidos da Management API do projeto de produção
+# (tscnqvuzlfagotirgjbz) em 01/10/2026.
+
+[functions.publicar-posts-agendados]
+# true: o pg_cron chama com a ANON key só pra passar o portão. As credenciais
+# reais (service_role) vêm do ambiente da função, injetadas pelo runtime.
+verify_jwt = true
+
+[functions.emitir-url-upload]
+# true: o chamador manda a anon key no Authorization E o segredo real no
+# header x-upload-secret. Duas camadas independentes de propósito.
+verify_jwt = true

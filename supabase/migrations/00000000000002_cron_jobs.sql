@@ -1,0 +1,101 @@
+-- =====================================================================
+-- aprovi.ai — AGENDADORES (pg_cron)
+-- =====================================================================
+--
+-- 🔴 TODO O CONTEÚDO EXECUTÁVEL DESTE ARQUIVO ESTÁ COMENTADO. DE PROPÓSITO.
+--
+-- Esta migration documenta os 2 jobs que rodam em PRODUÇÃO, pra que o
+-- agendamento seja parte do schema versionado e não folclore. Mas ela não
+-- liga nada.
+--
+-- POR QUE: o job nº1 publica DE VERDADE no Instagram de cliente real, a cada
+-- 10 minutos. Duas instâncias do aprovi.ai com cron ligado apontando pra
+-- mesma conta da Meta = post duplicado no perfil da cliente. Uma réplica de
+-- desenvolvimento não pode ter essa capacidade por padrão.
+--
+-- A réplica tem 4 travas independentes, e esta é uma delas:
+--   1. `posta_ai.social_accounts` vazia (sem ig_user_id e sem token_secret_id)
+--   2. nenhum token da Meta no Vault
+--   3. ZERO cron job — este arquivo
+--   4. todo post do seed com `agendado_para` a 10 anos no futuro
+--
+-- Pra ligar numa instância que REALMENTE deva publicar, descomente e troque
+-- os dois placeholders. Não ligue "pra testar" — teste chamando a Edge
+-- Function na mão, uma vez, e olhando `posta_ai.publish_jobs`.
+--
+-- Extraído de cron.job do projeto tscnqvuzlfagotirgjbz em 01/10/2026.
+-- =====================================================================
+
+
+-- create extension if not exists pg_cron with schema pg_catalog;
+-- create extension if not exists pg_net  with schema extensions;
+
+
+-- ---------------------------------------------------------------------
+-- JOB 1 — publicar-posts-agendados-job   (jobid 1 em produção)
+-- ---------------------------------------------------------------------
+-- A cada 10 minutos, chama a Edge Function pelo pg_net.
+--
+-- 📌 A chamada vai com a ANON key, não com a service_role. Isso é correto e
+-- intencional: a Edge Function tem `verify_jwt = true`, então precisa de UM
+-- JWT válido só pra passar o portão — e a anon key serve. As credenciais
+-- reais (service_role) a função pega do ambiente dela, injetadas pelo
+-- runtime. Nunca ponha a service_role no comando do cron: ela ficaria
+-- gravada em texto puro dentro de cron.job, legível por quem puder ler
+-- essa tabela.
+--
+-- select cron.schedule(
+--   'publicar-posts-agendados-job',
+--   '*/10 * * * *',
+--   $$
+--   select net.http_post(
+--     url     := 'https://<REF_DO_PROJETO>.supabase.co/functions/v1/publicar-posts-agendados',
+--     headers := jsonb_build_object(
+--                  'Content-Type',  'application/json',
+--                  'Authorization', 'Bearer <ANON_KEY_DO_PROJETO>'
+--                ),
+--     body    := '{}'::jsonb
+--   );
+--   $$
+-- );
+
+
+-- ---------------------------------------------------------------------
+-- JOB 2 — story diário por rodízio   (jobid 2 em produção)
+-- ---------------------------------------------------------------------
+-- Uma vez por dia, enfileira um story reaproveitando o vídeo elegível que
+-- está há mais tempo sem ir pra story.
+--
+-- 📌 PADRÃO HOMOLOGADO, vale pra qualquer automação futura: isto é SQL puro
+-- chamando uma função do banco, SEM Edge Function. Automação que só mexe em
+-- banco não precisa sair pra internet e voltar. Edge Function só quando
+-- precisa falar com o mundo de fora (como o job 1, que fala com a Meta).
+--
+-- 📌 O brand_id é parâmetro, não está dentro da função: um job por marca.
+-- Em produção existe um só, da Lymphatic by Gigi. O horário (0 15 * * *
+-- UTC) foi escolhido porque a função calcula o alvo em
+-- 'America/Los_Angeles' por timezone NOMEADA — então o horário de verão
+-- (PDT→PST em novembro) não desloca a postagem.
+--
+-- select cron.schedule(
+--   'story-diario-<SLUG_DA_MARCA>',
+--   '0 15 * * *',
+--   $$ select posta_ai.enfileirar_story_diario('<BRAND_ID>'::uuid) $$
+-- );
+
+
+-- ---------------------------------------------------------------------
+-- VERIFICAÇÃO
+-- ---------------------------------------------------------------------
+-- Numa réplica, o esperado é ZERO:
+--   select count(*) from cron.job;   -- esperado: 0
+--
+-- Em produção o esperado é 2. Pra ver o histórico:
+--   select jobid, status, start_time, return_message
+--   from cron.job_run_details
+--   where start_time > now() - interval '3 hours'
+--   order by start_time desc;
+--
+-- ⚠️ `status = 'succeeded'` aqui significa apenas que o SQL do job rodou.
+-- Como o job 1 dispara via pg_net (assíncrono), sucesso do cron NÃO é
+-- sucesso da publicação. Pra isso, olhe `posta_ai.publish_jobs`.
