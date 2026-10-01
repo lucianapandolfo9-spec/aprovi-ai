@@ -331,15 +331,14 @@ exatamente para que ninguém precise dela num script local.
 
 ## Débito conhecido
 
-**Exclusão de post falha na maioria dos posts.** `publish_jobs_post_id_fkey`,
-`posts_post_origem_id_fkey` e `posts_story_rodizio_de_fkey` não têm cláusula
-`ON DELETE`, e `posta_ai_admin_delete_post` faz um `delete` seco. Então
-excluir um post que já publicou (tem `publish_jobs`) ou que gerou story
-derivado dá violação de FK. Em produção, 01/10/2026: **36 de 40 posts não são
-deletáveis**. `posta_ai_admin_delete_brand` não tem o problema porque limpa na
-mão, tabela por tabela.
-Conserto possível, não aplicado (decisão da Luciana): `ON DELETE CASCADE` nas
-três FKs, ou limpeza manual dentro de `delete_post` espelhando `delete_brand`.
+**~~Exclusão de post falha na maioria dos posts.~~** ✅ Resolvido em
+01/10/2026. `posta_ai_admin_delete_post` fazia um `delete` seco e falhava por
+violação de FK em **36 de 40 posts** — `publish_jobs_post_id_fkey`,
+`posts_post_origem_id_fkey` e `posts_story_rodizio_de_fkey` não têm `ON
+DELETE`. As FKs **continuam sem cláusula** de propósito (histórico de
+publicação e stories derivados não devem cair em cascata); o conserto foi na
+função, que agora desvincula os derivados e apaga `publish_jobs` antes do
+post — o mesmo padrão que `posta_ai_admin_delete_brand` já usava.
 
 **Bucket sem limite em produção.** `posta-ai-media` tem `file_size_limit` e
 `allowed_mime_types` os dois NULL (pendência nº2 do `PROJETO.md`). A migration

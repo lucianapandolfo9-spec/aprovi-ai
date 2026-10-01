@@ -517,11 +517,16 @@ end;
 $function$
 ;
 
--- ⚠️ DÉBITO CONHECIDO (ver nota no fim do arquivo): este delete seco falha
--- por violação de FK em qualquer post que tenha publish_jobs ou que tenha
--- gerado story derivado — ao contrário de posta_ai_admin_delete_brand, que
--- limpa na mão. Reproduzido fielmente: a réplica tem o mesmo comportamento
--- que produção, de propósito.
+-- 📌 CORRIGIDO em 01/10/2026. A versão anterior fazia um
+-- `delete from posta_ai.posts` seco e falhava por violação de FK em
+-- **36 de 40 posts** em produção: `publish_jobs_post_id_fkey`,
+-- `posts_post_origem_id_fkey` e `posts_story_rodizio_de_fkey` não têm
+-- cláusula ON DELETE. Só os 4 posts que nunca publicaram nem geraram story
+-- derivado eram deletáveis.
+--
+-- Cobertura verificada: exatamente 7 FKs apontam pra posta_ai.posts —
+-- 4 são CASCADE (post_assets, post_captions, post_comments, post_events,
+-- caem sozinhas) e 3 bloqueiam, e as 3 são tratadas aqui.
 CREATE OR REPLACE FUNCTION public.posta_ai_admin_delete_post(p_post_id uuid)
  RETURNS void
  LANGUAGE plpgsql
@@ -530,6 +535,20 @@ CREATE OR REPLACE FUNCTION public.posta_ai_admin_delete_post(p_post_id uuid)
 AS $function$
 begin
   if not public.posta_ai_is_admin() then raise exception 'forbidden'; end if;
+
+  -- Stories derivados: DESVINCULA, não apaga.
+  -- O story derivado é um post separado, aparece no kanban e pode já ter
+  -- publicado no Instagram — apagar junto seria surpresa pra quem clicou em
+  -- "excluir" num reel. Perder o vínculo não custa nada: a guarda
+  -- anti-duplicata que ele servia só importa enquanto o post de origem existe.
+  update posta_ai.posts set post_origem_id   = null where post_origem_id   = p_post_id;
+  update posta_ai.posts set story_rodizio_de = null where story_rodizio_de = p_post_id;
+
+  -- publish_jobs NÃO tem ON DELETE CASCADE — tem que sair na mão.
+  delete from posta_ai.publish_jobs where post_id = p_post_id;
+
+  -- post_assets, post_captions, post_comments e post_events TÊM
+  -- ON DELETE CASCADE, então caem junto com o post. Não precisa listar.
   delete from posta_ai.posts where id = p_post_id;
 end;
 $function$
@@ -1147,17 +1166,14 @@ grant execute on function public.rpc_validar_upload(p_hash text, p_brand_id uuid
 -- DÉBITO CONHECIDO — reproduzido de propósito, não corrigido aqui
 -- =====================================================================
 --
--- 1. EXCLUSÃO DE POST FALHA EM 36 DE 40 POSTS (produção, 01/10/2026).
---    `publish_jobs_post_id_fkey`, `posts_post_origem_id_fkey` e
---    `posts_story_rodizio_de_fkey` não têm cláusula ON DELETE (default =
---    NO ACTION/RESTRICT), e posta_ai_admin_delete_post faz um
---    `delete from posta_ai.posts` seco. Então excluir qualquer post que já
---    publicou (tem publish_jobs: 33) ou que gerou story derivado (13) dá
---    violação de FK. Só os 4 que nunca publicaram nem geraram nada deletam.
---    posta_ai_admin_delete_brand não tem o problema porque limpa na mão.
---    Conserto possível (decisão da Luciana, não aplicado): ON DELETE CASCADE
---    nas três FKs, OU limpeza manual dentro de delete_post espelhando
---    delete_brand.
+-- 1. ✅ RESOLVIDO em 01/10/2026 — exclusão de post.
+--    As três FKs sem ON DELETE (`publish_jobs_post_id_fkey`,
+--    `posts_post_origem_id_fkey`, `posts_story_rodizio_de_fkey`) CONTINUAM
+--    sem cláusula, de propósito: o histórico de publicação (publish_jobs,
+--    com os ig_media_id) e os stories derivados não devem cair em cascata.
+--    O conserto foi na função: posta_ai_admin_delete_post agora desvincula
+--    os derivados e apaga publish_jobs antes do post, espelhando o padrão
+--    que posta_ai_admin_delete_brand já usava. Ver a nota na própria função.
 --
 -- 2. BUCKET SEM LIMITE EM PRODUÇÃO.
 --    `posta-ai-media` tem file_size_limit e allowed_mime_types os dois NULL.
