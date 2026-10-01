@@ -5,6 +5,10 @@
 # tem licença NOASSERTION e exige chave de licença pra organização. O binário é MIT.
 #
 # `fetch-depth: 0` é OBRIGATÓRIO — sem ele o gitleaks varre 1 commit só e passa limpo.
+#
+# A config `.gitleaks.toml` (quando existe) põe em allowlist as anon keys do Supabase
+# pelo VALOR EXATO — elas não são segredo. Qualquer JWT diferente, inclusive uma
+# service_role, continua travando. Leia o comentário de lá antes de mexer.
 name: seguranca
 on: [push, pull_request]
 permissions:
@@ -22,4 +26,7 @@ jobs:
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar xz gitleaks
           ./gitleaks version
       - name: varrer histórico completo
-        run: ./gitleaks git -v --redact .
+        run: |
+          CFG=""
+          [ -f .gitleaks.toml ] && CFG="-c .gitleaks.toml"
+          ./gitleaks git -v --redact $CFG .

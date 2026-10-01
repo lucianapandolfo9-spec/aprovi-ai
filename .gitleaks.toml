@@ -1,0 +1,27 @@
+# Configuração do gitleaks — baseline de segurança de 01/10/2026.
+#
+# 🔴 LEIA ANTES DE ADICIONAR QUALQUER COISA AQUI.
+#
+# Esta allowlist existe por UM motivo só: a `anon` key do Supabase NÃO é segredo.
+# Ela vai no bundle JS de todo app Supabase, por design, e respeita RLS. Tratar
+# anon key como segredo é o modo de falha padrão de app gerado por IA — e, pior,
+# faz o gate falhar em todo push, até você aprender a ignorar o gate.
+#
+# A allowlist é pelo VALOR EXATO das anon keys que já estão no histórico, e não
+# pela regra `jwt` inteira. Consequência de propósito: qualquer JWT diferente —
+# inclusive uma `service_role` ou `sb_secret_*` — CONTINUA travando o merge.
+#
+# Verificado em 01/10/2026: todo JWT em todo o histórico deste repo decodifica
+# para `role: anon`. Nenhuma service_role foi commitada nunca.
+#
+# ❌ Não adicione regra ampla (`paths`, `stopwords`, a regra `jwt` toda).
+# ✅ Se um dia a anon key rotacionar, troque o valor aqui — não relaxe a regra.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "anon keys do Supabase — públicas por design, verificadas em 01/10/2026"
+regexes = [
+  '''eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzY25xdnV6bGZhZ290aXJnamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4Mzc2NjgsImV4cCI6MjA5ODQxMzY2OH0''',
+]
