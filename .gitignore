@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------------
+# 🔴 NÃO ADICIONE `supabase/` NEM `migrations/` AQUI.
+#
+# O repo irmão `arroba-certa` ignora os dois ("não há motivo pra publicar o
+# desenho de segurança", 30/09/2026) e por isso a migration fundacional dele
+# nunca foi commitada. Aqui a decisão é a OPOSTA, e deliberada (01/10/2026):
+# o backend do aprovi.ai é versionado e público, porque é o único jeito do
+# Codex replicar o projeto a partir de outra conta sem convite — e porque a
+# defesa real não é obscuridade.
+#
+# A defesa real é: RLS nega-tudo nas 10 tabelas · schema posta_ai sem USAGE
+# pra anon/authenticated · tudo via SECURITY DEFINER · as 3 RPCs de alto
+# privilégio só pra service_role · token de marca com 24 bytes aleatórios.
+# Nada disso enfraquece por ser conhecido.
+#
+# O que NUNCA pode ser commitado é SEGREDO, e segredo não está em migration.
+# ---------------------------------------------------------------------
+
+# macOS
+.DS_Store
+
+# Supabase CLI — estado local por clone (guarda o project-ref do link)
+supabase/.temp/
+supabase/.branches/
+
+# Nunca versionar: valores crus de segredo
+*.key
+*.pem
+.env
+.env.*
+secrets/
