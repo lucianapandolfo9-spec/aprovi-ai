@@ -367,6 +367,78 @@ podem ser codadas a qualquer momento):**
    (`<video>` + `audioTracks`) ao anexar arquivo em "Novo conteúdo" no
    `index.html`. Não bloqueia, só avisa antes de mandar pra aprovação.
 
+## 🎯 Posicionamento — uso interno, não é produto à venda (11/set/2026)
+
+Decisão da Luciana, registrada pra não ser reinterpretada depois:
+**o aprovi.ai não vai ser vendido como produto por enquanto.** Ele é a
+ferramenta interna dela pra atender os próprios clientes de social media —
+os que ela já tem e os que for pegando.
+
+Consequência prática pra qualquer decisão futura: **priorizar o que reduz
+trabalho manual dela**, não o que deixaria o sistema vendável (onboarding
+self-service, cobrança, multi-usuário, marca branca). Isso não quer dizer
+descuidar de segurança ou multi-tenant — o `brand_id` desde a primeira
+tabela continua valendo, porque ela atende vários clientes no mesmo sistema.
+Quer dizer não gastar esforço em recurso que só existe pra vender.
+
+## 🔐 Upload sem chave mestra — arquitetura nova (11/set/2026)
+
+Substitui o `curl` com `service_role` documentado acima na seção da marca
+Luh Panda. Detalhe completo na skill `lymphatic-by-gigi`, seção "Upload de
+mídia SEM chave mestra". Resumo:
+
+- Edge Function **`emitir-url-upload`** devolve uma **URL assinada**, válida
+  ~2h, escopada a **um caminho só** do bucket. Quem chama não recebe
+  credencial de banco nenhuma.
+- Autenticação por header `x-upload-secret`. O **Vault guarda só o SHA-256**;
+  o valor cru foi gerado direto no disco e nunca passou por chat nem por
+  banco. A comparação acontece dentro do Postgres
+  (`public.rpc_validar_upload`, `SECURITY DEFINER`, execute só pra
+  `service_role`) e devolve só um código.
+- Script: `~/.claude/skills/lymphatic-by-gigi/subir-midia.sh <brand_id>
+  <arquivo> [nome]` — serve pra qualquer cliente, é só trocar o `brand_id`.
+- Testado como atacante: sem segredo → 401, segredo errado → 401, extensão
+  fora da lista → 400, `brand_id` inexistente → 404.
+
+🔴 **Teto de 50MB por arquivo** (plano free). Vídeo longo passa disso —
+comprimir antes (`-crf 21 -maxrate 5M`), o que vale de qualquer jeito porque
+o Instagram recomprime na entrada.
+
+## 📋 Pendências abertas (11/set/2026)
+
+**Fecham risco, rápidas:**
+1. **Apagar a `service_role` key do disco**
+   (`~/.claude/skills/lymphatic-by-gigi/secrets/supabase-service-role.txt`).
+   Não é mais usada no fluxo do dia a dia desde a arquitetura acima. É o
+   maior risco aberto hoje. Decisão da Luciana (apagar credencial é
+   irreversível).
+2. **Endurecer o bucket `posta-ai-media`:** `file_size_limit` e
+   `allowed_mime_types` estão **os dois NULL** — qualquer arquivo, qualquer
+   tamanho. Sugerido: 50MB e só `video/mp4`, `video/quicktime`, `image/*`.
+3. **Permissão do `subir-midia.sh` no `settings.json`** da Luciana. O
+   classificador é **inconsistente** com esse script (rodou 2x, bloqueou 2x
+   no mesmo dia, sem nada mudar). Sem a regra, o upload trava de vez em
+   quando. ⚠️ **Claude nunca instala essa permissão sozinha** — é decisão
+   dela, e agora é uma decisão barata (concede "subir mídia num bucket",
+   não mais "acesso ao banco inteiro").
+
+**Nunca exercitado — validar antes de confiar:**
+4. **Caminho de STORIES** — código certo nas 4 camadas, mas **0 stories
+   publicados** até 11/09. Primeiro teste: story do Organic1 em 11/09
+   22:00 UTC. Conferir `publish_jobs` depois.
+5. **Onboarding de cliente novo** — o processo está escrito (compartilhar
+   Página com a BM "Luh Panda" → atribuir ao Usuário do Sistema → criar
+   brand → apontar `social_accounts.token_secret_id` pro secret comum), mas
+   **só a Gigi passou por ele**. Fazer o segundo cliente com o roteiro na
+   mão pra descobrir onde quebra.
+
+**O buraco de produto (não urgente, mas é o maior):**
+6. **Não existe relatório pós-publicação.** Depois que publica, ninguém vê
+   alcance, salvamento, DM ou crescimento. Pra atender cliente de social
+   media isso é a primeira coisa que perguntam, e hoje teria que ser montado
+   à mão todo mês. É o próximo projeto de verdade — transforma "eu publico
+   pra você" em "eu mostro o que o seu dinheiro fez".
+
 ## Roadmap — notificação via n8n (não construído ainda, de propósito)
 
 Toda mudança de status já grava em `post_events`. Plugar n8n + Evolution é só apontar
