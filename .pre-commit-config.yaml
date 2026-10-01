@@ -1,0 +1,8 @@
+# Hook local — segura o segredo antes de virar commit.
+# Instalar uma vez por clone:  pre-commit install
+# Burlar quando precisar:      SKIP=gitleaks git commit
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks

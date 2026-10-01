@@ -1,0 +1,25 @@
+# Gate de segurança — baseline de 01/10/2026.
+# Trava o merge se um segredo entrar no repo. Repo é PÚBLICO: aqui o custo é zero.
+#
+# Binário do gitleaks direto, de propósito: a action `gitleaks/gitleaks-action`
+# tem licença NOASSERTION e exige chave de licença pra organização. O binário é MIT.
+#
+# `fetch-depth: 0` é OBRIGATÓRIO — sem ele o gitleaks varre 1 commit só e passa limpo.
+name: seguranca
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  segredo:
+    name: segredo no histórico (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: instalar gitleaks 8.30.1
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar xz gitleaks
+          ./gitleaks version
+      - name: varrer histórico completo
+        run: ./gitleaks git -v --redact .
