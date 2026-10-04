@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="aprovi.ai">
+  <!-- Versão SIMPLIFICADA do panda, só pro favicon (16-32px).
+       Sem pupila, sem boca e sem orelha interna: a 16px esses detalhes viram
+       ruído e a cara some. Aqui sobram 4 formas — cabeça, 2 orelhas, 2 manchas
+       e o nariz. O desenho completo é o assets/panda.svg. -->
+  <rect width="64" height="64" rx="15" fill="#12081A"/>
+  <circle cx="16" cy="18" r="8.6" fill="#F5F0EA"/>
+  <circle cx="48" cy="18" r="8.6" fill="#F5F0EA"/>
+  <circle cx="32" cy="36" r="20.5" fill="#F5F0EA"/>
+  <ellipse cx="23" cy="32.5" rx="6.6" ry="7.8" fill="#12081A" transform="rotate(-18 23 32.5)"/>
+  <ellipse cx="41" cy="32.5" rx="6.6" ry="7.8" fill="#12081A" transform="rotate(18 41 32.5)"/>
+  <ellipse cx="32" cy="45" rx="4.8" ry="3.6" fill="#12081A"/>
+</svg>

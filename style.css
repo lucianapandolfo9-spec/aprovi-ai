@@ -21,10 +21,20 @@ body{
   min-height:100vh;
 }
 a{color:var(--laranja);}
-.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 80px;}
+/* padding-bottom com safe-area: no iPhone instalado como app a barra de
+   gestos come o fim da página se não reservar o espaço. */
+.wrap{
+  max-width:1180px;margin:0 auto;
+  padding:24px 20px calc(80px + env(safe-area-inset-bottom));
+}
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
-  padding:16px 20px;border-bottom:1px solid var(--card-borda);
+  border-bottom:1px solid var(--card-borda);
+  position:sticky;top:0;z-index:20;background:var(--fundo);
+  /* status-bar translúcida do iOS em modo standalone entra por cima: o
+     env(safe-area-inset-top) empurra o conteúdo pra baixo dela. */
+  padding:calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right))
+          16px calc(20px + env(safe-area-inset-left));
 }
 .brandmark{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;}
 .brandmark .dot{width:10px;height:10px;border-radius:50%;background:var(--laranja);}
@@ -59,6 +69,7 @@ label{display:block;font-size:12px;color:var(--texto-suave);margin-bottom:6px;fo
 .tag{
   display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;
   font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  white-space:nowrap;
 }
 .tag-rascunho{background:#332038;color:#B79BC4;}
 .tag-em_aprovacao{background:#3A2E14;color:#E7B84E;}
@@ -85,14 +96,92 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
   border-radius:10px;padding:8px 10px;font-size:12px;color:var(--texto-suave);word-break:break-all;
 }
 .pending-post{margin-bottom:28px;}
-.pending-post .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+/* era flex lado a lado (título | status); virou bloco pra caber o selo de
+   formato acima do título sem espremer nada no celular. */
+.pending-post .head{display:block;margin-bottom:12px;}
+.pending-post .head h4{margin:0;font-size:17px;line-height:1.3;}
 .history-item{padding:10px 0;border-bottom:1px solid var(--card-borda);display:flex;justify-content:space-between;gap:10px;}
+.history-item .tag{flex:0 0 auto;align-self:flex-start;}
 .history-item:last-child{border-bottom:none;}
 .empty{text-align:center;padding:60px 20px;color:var(--texto-suave);}
 .spinner{width:22px;height:22px;border:3px solid var(--card-borda);border-top-color:var(--laranja);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .toast{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
   background:var(--roxo-escuro);color:#fff;padding:12px 20px;border-radius:10px;
   font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:50;
+}
+
+/* =====================================================================
+   SELO DE FORMATO — o cliente precisa bater o olho e saber O QUE está
+   aprovando. Sem isso, um carrossel de 5 slides e um story de 1 imagem
+   ficam visualmente idênticos (a capa é a mesma) — foi exatamente o que
+   fez a revisão de 14 peças sair comentada na peça errada.
+   ===================================================================== */
+.selo{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:999px;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
+  border:1px solid transparent;white-space:nowrap;
+}
+.selo-carrossel{background:rgba(255,107,53,.14);color:var(--laranja);border-color:rgba(255,107,53,.45);}
+.selo-reel{background:rgba(139,75,163,.22);color:#D9AFEA;border-color:rgba(139,75,163,.55);}
+.selo-feed{background:rgba(78,180,231,.14);color:#86CBF1;border-color:rgba(78,180,231,.42);}
+.selo-story{background:rgba(63,201,133,.13);color:#63DBA3;border-color:rgba(63,201,133,.4);}
+.selo-sm{font-size:10px;padding:2px 8px;}
+
+/* =====================================================================
+   GALERIA DE MÍDIA — carrossel com swipe horizontal (scroll-snap puro,
+   zero biblioteca). Antes os assets eram empilhados na vertical, o que
+   virava um card gigante no celular e não parecia carrossel nenhum.
+   ===================================================================== */
+.media{position:relative;}
+.gallery{
+  display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;scrollbar-width:none;border-radius:10px;
+}
+.gallery::-webkit-scrollbar{display:none;}
+.slide{
+  flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;
+  aspect-ratio:var(--ar,4 / 5);max-height:68vh;
+  background:#0A0410;border-radius:10px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.slide img,.slide video{
+  width:100%;height:100%;max-height:100%;object-fit:contain;
+  display:block;background:transparent;border-radius:0;
+}
+.media-badge{
+  position:absolute;top:10px;right:10px;z-index:2;pointer-events:none;
+  background:rgba(10,4,16,.84);border:1px solid rgba(245,240,234,.2);
+  color:var(--texto);border-radius:999px;padding:4px 11px;
+  font-size:12px;font-weight:700;letter-spacing:.3px;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:10px;}
+.dots i{
+  width:7px;height:7px;border-radius:50%;background:var(--card-borda);
+  display:block;cursor:pointer;transition:background .15s ease,width .15s ease;
+}
+.dots i.on{background:var(--laranja);width:20px;border-radius:999px;}
+.swipe-hint{text-align:center;font-size:12px;color:var(--texto-suave);margin-top:7px;}
+.origem{
+  font-size:12.5px;line-height:1.45;color:var(--texto-suave);
+  margin:8px 0 0;padding:8px 10px;border-radius:8px;
+  background:#160B1F;border-left:3px solid var(--roxo-claro);
+}
+.origem b{color:var(--texto);font-weight:600;}
+.head-selos{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px;}
+.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.actions .btn{flex:1 1 220px;}
+
+/* ===== Celular ===== */
+@media (max-width:640px){
+  /* 16px é o limite abaixo do qual o Safari dá zoom sozinho ao focar
+     um campo — e aí a tela inteira sai do lugar no meio da aprovação. */
+  input[type=text],input[type=email],input[type=datetime-local],textarea,select{font-size:16px;}
+  .wrap{padding:16px 14px calc(72px + env(safe-area-inset-bottom));}
+  .card{padding:14px;}
+  .actions .btn{flex:1 1 100%;padding:14px 16px;font-size:15px;}
+  .pending-post{margin-bottom:22px;}
 }

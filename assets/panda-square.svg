@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="aprovi.ai">
+  <!-- Variante quadrada opaca, base do apple-touch-icon: o iOS aplica o próprio
+       arredondamento e não aceita transparência (vira fundo preto). -->
+  <rect width="64" height="64" fill="#12081A"/>
+  <g transform="translate(32 32) scale(0.92) translate(-32 -34)">
+    <circle cx="17.5" cy="19" r="8" fill="#F5F0EA"/>
+    <circle cx="46.5" cy="19" r="8" fill="#F5F0EA"/>
+    <circle cx="17.5" cy="18.5" r="3.6" fill="#12081A"/>
+    <circle cx="46.5" cy="18.5" r="3.6" fill="#12081A"/>
+    <circle cx="32" cy="36" r="19.5" fill="#F5F0EA"/>
+    <ellipse cx="23.6" cy="33.4" rx="6" ry="7.3" fill="#12081A" transform="rotate(-20 23.6 33.4)"/>
+    <ellipse cx="40.4" cy="33.4" rx="6" ry="7.3" fill="#12081A" transform="rotate(20 40.4 33.4)"/>
+    <circle cx="24.4" cy="32.2" r="2.1" fill="#F5F0EA"/>
+    <circle cx="39.6" cy="32.2" r="2.1" fill="#F5F0EA"/>
+    <ellipse cx="32" cy="43.2" rx="4.1" ry="3.1" fill="#12081A"/>
+    <path d="M32 46.6 v2.2 M32 48.8 q-3.1 2.4 -5.6 -0.4 M32 48.8 q3.1 2.4 5.6 -0.4"
+          fill="none" stroke="#12081A" stroke-width="1.7" stroke-linecap="round"/>
+  </g>
+</svg>
