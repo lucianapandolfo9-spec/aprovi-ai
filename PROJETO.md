@@ -439,6 +439,85 @@ o Instagram recomprime na entrada.
    à mão todo mês. É o próximo projeto de verdade — transforma "eu publico
    pra você" em "eu mostro o que o seu dinheiro fez".
 
+## 📱 PWA + leitura de formato na tela do cliente (04/10/2026)
+
+Duas coisas na mesma leva: instalar como app no celular, e consertar a falha de
+interface que fez uma revisão inteira sair comentada na peça errada.
+
+### O erro que motivou o conserto (é de interface, não de quem aprovou)
+
+Numa revisão de 14 peças pelo celular, os 7 comentários foram parar nos cards de
+**story** (1 imagem) em vez dos de **carrossel** (5 imagens). Quatro deles diziam
+"quero como carrossel ensinando do início ao fim" — pedindo exatamente o que o
+carrossel ao lado já era.
+
+Causa raiz no `postCard()` do `cliente.html`: os assets eram renderizados como
+**pilha vertical de `<img>` separadas por um espaçador de 10px**. Um carrossel de
+5 slides virava um card altíssimo no celular, **sem nenhuma indicação de que era
+carrossel**, sem contador e sem swipe. O story mostrava a mesma capa. Os dois
+ficavam visualmente idênticos.
+
+➜ **Lição que vale pra qualquer tela de aprovação: se duas peças de formatos
+diferentes compartilham a capa, a tela precisa dizer o formato em texto. Capa não
+é identidade.**
+
+### O que mudou na tela do cliente
+
+- **Selo de formato** no topo de cada card e no histórico: `Carrossel · 5 slides`,
+  `Reel`, `Story`, `Post do feed`. Primeira coisa que se lê.
+- **Galeria com swipe horizontal** (`scroll-snap` puro em CSS, zero biblioteca):
+  contador `1/5`, bolinhas clicáveis, e proporção do quadro conforme o formato
+  (4/5 pra feed/carrossel, 9/16 pra reel/story), com teto de `68vh`.
+- **Copy deixou de ser toda sobre vídeo.** Botão e campo de ajuste trocam de texto
+  conforme `formato` + tipo do asset: "Precisa ajustar os slides" num carrossel,
+  "Precisa editar o vídeo" num reel. `ajuste_pedido` continua significando a mesma
+  coisa (mexer na mídia, nunca na legenda) — só o rótulo ficou honesto.
+- **Story derivado é anunciado.** `Story companheiro` / `Story do rodízio`, com
+  uma linha dizendo de qual post ele saiu.
+  🔴 **Armadilha:** `posta_ai_client_feed` **não devolve** `post_origem_id` nem
+  `story_rodizio_de`, então a origem é lida do **sufixo do título** (`— Story
+  (auto)` e `— Story (rodízio)`, carimbados por `rpc_marcar_resultado_publicacao`
+  e `posta_ai.enfileirar_story_diario`). **Mudar esse sufixo no SQL quebra o aviso
+  na tela, em silêncio.** O conserto definitivo é devolver as duas colunas no feed
+  — é mudança de schema, não foi feita aqui de propósito.
+- Correções de celular que vinham junto: `maximum-scale=1` removido (travava o
+  pinch-zoom numa tela feita pra olhar imagem), campos a 16px (abaixo disso o
+  Safari dá zoom sozinho ao focar), botões empilhados e grandes.
+
+### PWA — instalar como app
+
+| Arquivo | Pra quê |
+|---|---|
+| `manifest.webmanifest` | painel dela — `start_url: ./index.html`, id `aprovi-painel` |
+| `manifest-cliente.webmanifest` | tela de aprovação — `start_url: ./cliente.html`, id `aprovi-cliente` |
+| `sw.js` | service worker do app shell |
+| `assets/panda.svg` + `favicon.svg` + PNGs | ícones (desenho próprio, sem arte de terceiro) |
+
+**São dois manifests de propósito**, com `id` diferente: as duas telas são apps
+diferentes e instalam separado, cada uma abrindo onde deve.
+
+🔴 **O service worker NUNCA cacheia Supabase.** Ele só toca em arquivo estático da
+própria origem, e com estratégia **network-first** (online = sempre o arquivo
+recém-publicado; offline = a casca abre e avisa). Resposta de RPC, sessão de Auth
+e mídia do Storage passam direto pela rede, sem interceptação. Um SW agressivo
+aqui faria ela **aprovar conteúdo velho** — o pior erro possível neste produto.
+A chave de cache também **descarta a query string**, então o `?t=<secret_token>`
+nunca é gravado no Cache Storage.
+
+🔴 **Token do cliente no `localStorage`.** Instalado como app, o iPhone pode abrir
+pelo `start_url` do manifest — sem o `?t=`. Então o token é guardado na primeira
+visita e reusado quando a query vier vazia (`?t=` da URL sempre ganha). Efeito
+colateral conhecido: **abrir o link de outra marca no mesmo aparelho sobrescreve
+o token**, e o app instalado passa a abrir a marca nova. Com uma marca por
+aparelho não incomoda; com duas, incomoda.
+
+**Ícone a 16px tem desenho próprio.** `assets/favicon.svg` é uma versão
+**simplificada** do panda (sem pupila, sem boca, sem orelha interna) — a 16px
+esses detalhes viram ruído e a cara some. O desenho completo (`assets/panda.svg`)
+só é usado de 32px pra cima. Os PNGs são gerados pelo **Chrome headless**, não
+pelo `magick`: o renderizador SVG interno do ImageMagick **descarta `transform:
+rotate` em `<ellipse>`** e apaga as manchas dos olhos sem avisar.
+
 ## Roadmap — notificação via n8n (não construído ainda, de propósito)
 
 Toda mudança de status já grava em `post_events`. Plugar n8n + Evolution é só apontar

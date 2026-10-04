@@ -2,9 +2,28 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<!-- maximum-scale=1 foi removido de propósito: travava o pinch-zoom numa tela
+     cujo trabalho é justamente olhar imagem de perto. viewport-fit=cover é o
+     que habilita env(safe-area-inset-*) no iPhone instalado como app. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>aprovi.ai — aprovação de conteúdo</title>
+<meta name="description" content="Aprove ou peça ajuste nos conteúdos antes de irem pro ar.">
 <link rel="stylesheet" href="style.css">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest-cliente.webmanifest">
+<meta name="theme-color" content="#12081A">
+<meta name="color-scheme" content="dark">
+<!-- iOS ignora o manifest pra ícone e título: precisa destas metas -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="aprovi">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
@@ -21,9 +40,21 @@
 <script src="config.js"></script>
 <script>
 const params = new URLSearchParams(location.search);
-const TOKEN = params.get('t');
 const appEl = document.getElementById('app');
 const brandLabel = document.getElementById('brand-label');
+
+// ---------- TOKEN ----------
+// Instalado como app no iPhone, a tela pode abrir pelo start_url do manifest
+// (./cliente.html, sem ?t=). Então o token do link é guardado na primeira
+// visita e reusado quando a query vier vazia. O ?t= da URL sempre ganha.
+// Nota: o token só fica no aparelho de quem já tinha o link — ele já está no
+// histórico e no atalho do navegador; o localStorage não amplia o acesso.
+const CHAVE_TOKEN = 'aprovi_token';
+let TOKEN = params.get('t');
+try {
+  if (TOKEN) localStorage.setItem(CHAVE_TOKEN, TOKEN);
+  else TOKEN = localStorage.getItem(CHAVE_TOKEN);
+} catch (_) { /* modo privado: segue só com o ?t= da URL */ }
 
 function esc(s){ return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function toast(msg){
@@ -37,7 +68,73 @@ function statusLabel(s){
     aprovado:'Aprovado', agendado:'Agendado', publicando:'Publicando', publicado:'Publicado', falhou:'Falhou'}[s] || s;
 }
 
+// ---------- FORMATO DA PEÇA ----------
+// Tudo que muda de uma peça pra outra (selo, proporção do quadro, texto do
+// botão de ajuste) sai daqui. Antes a tela era 100% escrita pra vídeo e dizia
+// "precisa editar o vídeo" até num carrossel de fotos.
+function formatoInfo(p){
+  const assets = p.assets || [];
+  const n = assets.length;
+  const temVideo = assets.some(a => a.tipo === 'video');
+  const f = p.formato || 'reel';
+
+  if(f === 'story'){
+    return { chave:'story', selo:'📲 Story', ar:'9 / 16',
+             botao: temVideo ? '🎬 Precisa editar o vídeo' : '🖼️ Precisa ajustar a arte',
+             label: temVideo ? 'Precisa editar o vídeo? Descreve aqui o que muda'
+                             : 'Precisa ajustar a arte? Descreve aqui o que muda',
+             ph: temVideo ? 'Ex: corta o começo, o som está baixo...'
+                          : 'Ex: troca a foto, o texto ficou em cima do rosto...' };
+  }
+  // o backend trata 2+ assets como CAROUSEL, qualquer que seja o formato
+  // gravado — a tela segue a mesma regra pra não mentir pro aprovador.
+  if(f === 'carrossel' || n > 1){
+    return { chave:'carrossel', selo:`🖼️ Carrossel · ${n} ${n === 1 ? 'slide' : 'slides'}`, ar:'4 / 5',
+             botao:'🖼️ Precisa ajustar os slides',
+             label:'Precisa ajustar os slides? Descreve aqui o que muda',
+             ph:'Ex: inverte o slide 2 com o 3, o texto do último está cortado...' };
+  }
+  if(f === 'reel'){
+    return { chave:'reel', selo:'🎬 Reel', ar:'9 / 16',
+             botao:'🎬 Precisa editar o vídeo',
+             label:'Precisa editar o vídeo? Descreve aqui o que muda',
+             ph:'Ex: corta a mão que aparece no segundo 12, câmera balança no início...' };
+  }
+  return { chave:'feed', selo: temVideo ? '🎬 Vídeo do feed' : '🖼️ Post do feed', ar:'4 / 5',
+           botao: temVideo ? '🎬 Precisa editar o vídeo' : '🖼️ Precisa ajustar a imagem',
+           label: temVideo ? 'Precisa editar o vídeo? Descreve aqui o que muda'
+                           : 'Precisa ajustar a imagem? Descreve aqui o que muda',
+           ph: temVideo ? 'Ex: corta o começo, o som está baixo...'
+                        : 'Ex: a logo ficou pequena, troca a cor do fundo...' };
+}
+
+// ---------- STORY DERIVADO ----------
+// O banco não devolve post_origem_id / story_rodizio_de no feed do cliente,
+// mas as duas automações carimbam o sufixo no título. Ler o sufixo é o jeito
+// de identificar a origem sem tocar no schema.
+// (posta_ai: `titulo || ' — Story (auto)'` e `|| ' — Story (rodízio)'`)
+const SUFIXOS_STORY = [
+  { re:/\s—\sStory \(auto\)$/,
+    rotulo:'Story companheiro',
+    frase: b => `Não é um post novo: é o story gerado sozinho a partir de <b>${b}</b>, com a mesma mídia, 1 dia depois.` },
+  { re:/\s—\sStory \(rodízio\)$/,
+    rotulo:'Story do rodízio',
+    frase: b => `Não é um post novo: é o story do rodízio diário, reaproveitando o vídeo de <b>${b}</b>.` }
+];
+function origemStory(titulo){
+  const t = titulo || '';
+  for(const s of SUFIXOS_STORY){
+    if(s.re.test(t)) return { rotulo:s.rotulo, frase:s.frase(esc(t.replace(s.re,''))) };
+  }
+  return null;
+}
+
 async function loadFeed(){
+  if(typeof window.supabase === 'undefined'){
+    appEl.innerHTML = `<div class="empty">Sem conexão com o servidor.<br>
+      <button class="btn btn-outline" style="margin-top:14px;" onclick="location.reload()">Tentar de novo</button></div>`;
+    return;
+  }
   if(!TOKEN){
     appEl.innerHTML = `<div class="empty">Link inválido. Peça o link certo pra Luciana.</div>`;
     return;
@@ -69,7 +166,7 @@ function render(posts){
   </div>`;
 
   if(pending.length === 0){
-    html += `<div class="empty">Nenhum conteúdo esperando aprovação agora. 🎬</div>`;
+    html += `<div class="empty">Nenhum conteúdo esperando aprovação agora. 🐼</div>`;
   } else {
     html += `<h3 style="color:var(--texto-suave);font-size:13px;text-transform:uppercase;letter-spacing:.5px;">Esperando você</h3>`;
     pending.forEach(p => { html += postCard(p); });
@@ -78,24 +175,90 @@ function render(posts){
   if(history.length){
     html += `<div class="card" style="margin-top:32px;">
       <label>Histórico</label>
-      ${history.map(p => `
+      ${history.map(p => {
+        const fi = formatoInfo(p);
+        const org = origemStory(p.titulo_interno);
+        return `
         <div class="history-item">
-          <div>${esc(p.titulo_interno || 'Sem título')} <span class="muted">— ${new Date(p.criado_em).toLocaleDateString('pt-BR')}</span></div>
+          <div>
+            <div>${esc(p.titulo_interno || 'Sem título')} <span class="muted">— ${new Date(p.criado_em).toLocaleDateString('pt-BR')}</span></div>
+            <div style="margin-top:5px;"><span class="selo selo-${fi.chave} selo-sm">${fi.selo}</span>${
+              org ? ` <span class="muted" style="font-size:11px;">${org.rotulo}</span>` : ''}</div>
+          </div>
           <span class="tag tag-${p.status}">${statusLabel(p.status)}</span>
-        </div>
-      `).join('')}
+        </div>`;
+      }).join('')}
     </div>`;
   }
 
   appEl.innerHTML = html;
+  ligarGalerias();
+}
+
+// Galeria com swipe horizontal + contador. Antes os assets eram empilhados na
+// vertical com um espaçador de 10px: um carrossel de 5 slides virava um card
+// altíssimo, sem contador e sem nenhuma pista de que era carrossel — idêntico
+// ao story ao lado, que mostra a mesma capa.
+function galeria(p, fi){
+  const assets = p.assets || [];
+  if(!assets.length){
+    return `<div class="empty" style="padding:28px;">Esse conteúdo ainda está sem arquivo anexado.</div>`;
+  }
+  const total = assets.length;
+  const slides = assets.map((a, i) => `
+    <div class="slide" role="group" aria-label="Slide ${i+1} de ${total}">
+      ${a.tipo === 'video'
+        ? `<video src="${esc(a.url)}" controls playsinline preload="metadata"></video>`
+        : `<img src="${esc(a.url)}" alt="Slide ${i+1} de ${total}" loading="lazy">`}
+    </div>`).join('');
+
+  const multi = total > 1;
+  const avisoStory = (fi.chave === 'story' && multi)
+    ? `<div class="swipe-hint">⚠️ Story publica só o primeiro arquivo.</div>` : '';
+
+  return `
+  <div class="media" style="--ar:${fi.ar};">
+    ${multi ? `<span class="media-badge" data-contador>1/${total}</span>` : ''}
+    <div class="gallery" data-galeria data-total="${total}">${slides}</div>
+    ${multi ? `<div class="dots" data-dots>${assets.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>
+               <div class="swipe-hint">Arraste pro lado pra ver os ${total} slides</div>` : ''}
+    ${avisoStory}
+  </div>`;
+}
+
+function ligarGalerias(){
+  appEl.querySelectorAll('[data-galeria]').forEach(g => {
+    const total = Number(g.dataset.total || 1);
+    if(total < 2) return;
+    const media = g.closest('.media');
+    const contador = media.querySelector('[data-contador]');
+    const dots = Array.from(media.querySelectorAll('[data-dots] i'));
+    const passo = () => {
+      const a = g.children[0], b = g.children[1];
+      return (b ? (b.offsetLeft - a.offsetLeft) : g.clientWidth) || 1;
+    };
+    const atual = () => Math.max(0, Math.min(total - 1, Math.round(g.scrollLeft / passo())));
+    let pendente = false;
+    const pintar = () => {
+      const i = atual();
+      if(contador) contador.textContent = `${i+1}/${total}`;
+      dots.forEach((d, k) => d.classList.toggle('on', k === i));
+    };
+    g.addEventListener('scroll', () => {
+      if(pendente) return;
+      pendente = true;
+      requestAnimationFrame(() => { pendente = false; pintar(); });
+    }, { passive:true });
+    dots.forEach((d, k) => d.addEventListener('click', () => {
+      g.scrollTo({ left: k * passo(), behavior:'smooth' });
+    }));
+  });
 }
 
 function postCard(p){
-  const assets = p.assets || [];
-  const mediaHtml = assets.map(a => a.tipo === 'video'
-    ? `<video src="${esc(a.url)}" controls playsinline preload="metadata"></video>`
-    : `<img src="${esc(a.url)}" style="width:100%;border-radius:10px;">`
-  ).join('<div style="height:10px;"></div>');
+  const fi = formatoInfo(p);
+  const org = origemStory(p.titulo_interno);
+  const titulo = esc(p.titulo_interno || 'Novo conteúdo');
 
   const comments = (p.comentarios || []).map(c =>
     `<div class="comment"><b>${c.autor === 'editor' ? 'Luciana' : 'Você'}:</b> ${esc(c.texto)}</div>`
@@ -104,23 +267,28 @@ function postCard(p){
   return `
   <div class="card pending-post" data-id="${p.id}">
     <div class="head">
-      <h4 style="margin:0;">${esc(p.titulo_interno || 'Novo conteúdo')}</h4>
-      <span class="tag tag-${p.status}">${statusLabel(p.status)}</span>
+      <div class="head-selos">
+        <span class="selo selo-${fi.chave}">${fi.selo}</span>
+        <span class="tag tag-${p.status}">${statusLabel(p.status)}</span>
+        ${org ? `<span class="selo selo-story selo-sm">↩︎ ${org.rotulo}</span>` : ''}
+      </div>
+      <h4>${titulo}</h4>
+      ${org ? `<p class="origem">${org.frase}</p>` : ''}
     </div>
-    ${mediaHtml}
-    <div class="field" style="margin-top:14px;">
+    ${galeria(p, fi)}
+    <div class="field" style="margin-top:16px;">
       <label>Legenda desse post</label>
       <textarea class="caption-field">${esc(p.legenda_atual)}</textarea>
       <div class="muted" style="font-size:12px;margin-top:4px;">Só mudou o texto? Edite aqui em cima e clique em Aprovar — fica aprovado na hora, não precisa pedir nada.</div>
     </div>
     ${comments ? `<div style="margin-bottom:12px;">${comments}</div>` : ''}
     <div class="field">
-      <label>Precisa editar o vídeo? Descreve aqui o que muda</label>
-      <textarea class="comment-field" placeholder="Ex: corta a mão que aparece no segundo 12, câmera balança no início..."></textarea>
+      <label>${fi.label}</label>
+      <textarea class="comment-field" placeholder="${esc(fi.ph)}"></textarea>
     </div>
-    <div class="row">
+    <div class="actions">
       <button class="btn btn-approve" onclick="decide('${p.id}','aprovado',this)">✅ Aprovar</button>
-      <button class="btn btn-adjust" onclick="decide('${p.id}','ajuste_pedido',this)">🎬 Precisa editar o vídeo</button>
+      <button class="btn btn-adjust" onclick="decide('${p.id}','ajuste_pedido',this)">${fi.botao}</button>
     </div>
   </div>`;
 }
@@ -131,7 +299,7 @@ async function decide(postId, decisao, btn){
   const comentario = card.querySelector('.comment-field').value;
 
   if(decisao === 'ajuste_pedido' && !comentario.trim()){
-    toast('Descreve o que precisa mudar no vídeo.');
+    toast('Descreve o que precisa mudar.');
     return;
   }
 
@@ -145,7 +313,7 @@ async function decide(postId, decisao, btn){
     card.querySelectorAll('button').forEach(b => b.disabled = false);
     return;
   }
-  toast(decisao === 'aprovado' ? 'Aprovado!' : 'Pedido de edição enviado pra Luciana.');
+  toast(decisao === 'aprovado' ? 'Aprovado!' : 'Pedido de ajuste enviado pra Luciana.');
   loadFeed();
 }
 
@@ -157,6 +325,12 @@ async function saveSignature(){
 }
 
 loadFeed();
+
+// PWA: o service worker só cacheia o app shell. Nada de Supabase passa por ele
+// (ver sw.js) — aprovar conteúdo velho seria o pior erro possível aqui.
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>
