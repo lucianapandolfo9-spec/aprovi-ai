@@ -1,6 +1,8 @@
 // Fase 2 do aprovi.ai — publicação automática no Instagram.
 //
-// ⚠️ ESTE ARQUIVO FOI BAIXADO DO DEPLOY (versão 19) em 01/10/2026, não
+// ⚠️ Base: deploy v19 (baixado 01/10/2026 e reconferido 05/10/2026 contra produção).
+// 05/10/2026: MAX_POSTS_POR_EXECUCAO 5→1 e POLL_VIDEO.timeout 5min→100s (job órfão).
+// Originalmente BAIXADO DO DEPLOY (versão 19) em 01/10/2026, não
 // copiado de nenhuma cópia local. Existia uma cópia em
 // ~/.claude/skills/lymphatic-by-gigi/publicar-posts-agendados.ts que estava
 // DESATUALIZADA — sem suporte a CAROUSEL, STORIES nem `children`, que
@@ -37,11 +39,17 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
 const GRAPH_API_VERSION = "v21.0";
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_API_VERSION}`;
-const MAX_POSTS_POR_EXECUCAO = 5; // trava de segurança — nunca processa a fila inteira numa chamada só
+// 1 por execução (era 5 até 05/10/2026). A org é free → teto de wall-clock ~150s.
+// Com 5 em série, o 2º vídeo da mesma execução estourava o teto e a function era
+// morta no meio do poll, deixando job órfão em `em_andamento` (Organic2, 18/09).
+// O próximo item sai no cron seguinte (+10 min).
+const MAX_POSTS_POR_EXECUCAO = 1;
 const MAX_ITENS_CARROSSEL = 10;   // limite da própria Meta
 
 // Vídeo demora pra processar do lado da Meta; imagem fica pronta quase na hora.
-const POLL_VIDEO = { intervalo: 10_000, timeout: 5 * 60 * 1000 };
+// timeout 100s (era 5 min): tem que caber no teto da plataforma pra falhar LIMPO,
+// com erro gravado em publish_jobs, em vez de ser morto calado.
+const POLL_VIDEO = { intervalo: 10_000, timeout: 100_000 };
 const POLL_IMAGEM = { intervalo: 2_000, timeout: 60 * 1000 };
 
 type Asset = { ordem: number; tipo: "video" | "imagem"; url: string };
