@@ -23,3 +23,8 @@ verify_jwt = true
 # true: o chamador manda a anon key no Authorization E o segredo real no
 # header x-upload-secret. Duas camadas independentes de propósito.
 verify_jwt = true
+
+[functions.limpar-midia-publicada]
+# true: o pg_cron chama com a ANON key, igual ao publicador. A regra do que
+# apagar mora no banco (rpc_midia_expirada, piso de 30 dias), não aqui.
+verify_jwt = true
