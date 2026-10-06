@@ -591,9 +591,9 @@ begin
       v_erro := 'social_accounts nao encontrado para essa marca';
     elsif not coalesce(v_pub_ig, false) and not coalesce(v_pub_fb, false) then
       v_erro := 'nenhum canal ligado em social_accounts (publicar_instagram e publicar_facebook = false)';
-    elsif v_pub_ig and v_ig is null then
+    elsif v_pub_ig and coalesce(v_ig, '') = '' then
       v_erro := 'publicar_instagram ligado, mas a marca nao tem ig_user_id';
-    elsif v_pub_fb and v_page is null then
+    elsif v_pub_fb and coalesce(v_page, '') = '' then
       v_erro := 'publicar_facebook ligado, mas a marca nao tem page_id';
     end if;
 
