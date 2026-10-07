@@ -29,7 +29,7 @@
 --   * o secret_token da marca (link de aprovação) é gerado pelo default
 --     da coluna. Ler depois no banco, nunca escrever literal aqui.
 --
--- WORKSPACE — preparado pro "Luh Panda" (0f495bb3-…). Pra a marca ter
+-- WORKSPACE — "Luh Panda" (0f495bb3-…), CONFIRMADO por ela em 06/10/2026. Pra a marca ter
 -- workspace próprio, trocar o bloco 1 por:
 --     insert into posta_ai.workspaces (id, nome)
 --     values ('<uuid novo>', 'Certo Agro') on conflict (id) do nothing;
@@ -85,13 +85,14 @@ select 'f177c68e-a912-42c6-bc0c-48d790d73cfe',
 where not exists (select 1 from posta_ai.social_accounts
                   where brand_id = 'f177c68e-a912-42c6-bc0c-48d790d73cfe');
 
--- 3. Horários de story (decisão 8), fuso America/Recife
---    07:00 seg–sex  → story de COTAÇÃO, criado pela automação (bloco 4).
---                     Não entra aqui de propósito: se fosse "repost", o
---                     companheiro do feed podia ocupar as 7h e a cotação
---                     cairia em cima dele.
---    12:00 seg–sex  → repost: o feed das 18h vira story no próximo 12:00 útil
+-- 3. Horários de story (decisão 8, horários INVERTIDOS por ela em 06/10/2026),
+--    fuso America/Recife
+--    07:00 seg–sex  → repost: o feed das 18h vira story no próximo 07:00 útil
 --                     (feed de sexta → story de segunda).
+--    12:00 seg–sex  → story de COTAÇÃO, criado pela automação (bloco 4).
+--                     Não entra aqui de propósito: se fosse "repost", o
+--                     companheiro do feed podia ocupar as 12h e a cotação
+--                     cairia em cima dele.
 --    09:00 sáb–dom  → rodízio, criado DESLIGADO. Falta: (a) o banco fixo
 --                     de fim de semana, ainda não decidido; (b) o rodízio só
 --                     sorteia VÍDEO de feed/reel aprovado; (c) marca com
@@ -102,7 +103,7 @@ where not exists (select 1 from posta_ai.social_accounts
 --       select cron.schedule('story-diario-certo-agro', '0 11 * * *',
 --         $c$ select posta_ai.enfileirar_story_diario('f177c68e-a912-42c6-bc0c-48d790d73cfe') $c$);
 insert into posta_ai.story_horarios (brand_id, tipo, hora, dias_semana, ativo) values
-  ('f177c68e-a912-42c6-bc0c-48d790d73cfe', 'repost',  '12:00', '{1,2,3,4,5}', true),
+  ('f177c68e-a912-42c6-bc0c-48d790d73cfe', 'repost',  '07:00', '{1,2,3,4,5}', true),
   ('f177c68e-a912-42c6-bc0c-48d790d73cfe', 'rodizio', '09:00', '{6,7}',       false)
 on conflict (brand_id, tipo, hora) do nothing;
 
@@ -119,7 +120,7 @@ insert into posta_ai.automacoes
 values
   ('f177c68e-a912-42c6-bc0c-48d790d73cfe',
    'certo-agro-story-cotacao',
-   'n8n na VPS: lê cotacao_arroba (Supabase Certo Agro), gera PNG 9:16 pelo molde O2 versão story, sobe no Storage e cria o story das 7h seg–sex. Travas: 4 praças mesma data, máx. 3 dias úteis pelo criado_em, sem fim de semana/feriado.',
+   'n8n na VPS: lê cotacao_arroba (Supabase Certo Agro), gera PNG 9:16 pelo molde O2 versão story, sobe no Storage e cria o story das 12h (America/Recife) seg–sex. Travas: 4 praças mesma data, máx. 3 dias úteis pelo criado_em, sem fim de semana/feriado.',
    '92f3317b01c743f272ed022828e3ab2581d370ab80ba11e3a0ad9437756b4f61',
    '{story}',
    false,
