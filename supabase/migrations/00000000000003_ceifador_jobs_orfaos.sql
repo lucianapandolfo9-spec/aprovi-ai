@@ -73,6 +73,12 @@ $$;
 
 revoke all on function posta_ai.ceifar_jobs_orfaos() from public, anon, authenticated;
 
+-- 06/10/2026: numa réplica limpa o pg_cron não existe (a 00000000000002 deixa
+-- o `create extension` comentado), e o `cron.schedule` abaixo quebrava a
+-- aplicação inteira com `schema "cron" does not exist`. Achado no primeiro
+-- `supabase start` limpo deste repo. Em produção é no-op (a extensão já existe).
+create extension if not exists pg_cron with schema pg_catalog;
+
 -- cron.schedule com o mesmo nome atualiza o job existente (idempotente).
 select cron.schedule(
   'ceifar-jobs-orfaos',

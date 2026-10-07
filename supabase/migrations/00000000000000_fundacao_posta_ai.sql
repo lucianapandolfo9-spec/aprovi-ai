@@ -288,6 +288,7 @@ CREATE OR REPLACE FUNCTION public.posta_ai_is_admin()
  RETURNS boolean
  LANGUAGE sql
  STABLE
+ SET search_path TO ''
 AS $function$
   select coalesce(auth.email(), '') = 'lucianapandolfo9@gmail.com';
 $function$
