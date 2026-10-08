@@ -1,0 +1,60 @@
+-- =====================================================================
+-- aprovi.ai — AGENDADOR DA LIMPEZA DE STORAGE (pg_cron) · 07/10/2026
+-- =====================================================================
+--
+-- 🔴 O CONTEÚDO EXECUTÁVEL ESTÁ COMENTADO, DE PROPÓSITO (mesmo padrão da
+-- 00000000000002_cron_jobs.sql). Aplicar este arquivo NÃO liga nada.
+--
+-- POR QUE EXISTE
+-- A Edge Function `limpar-midia-publicada` (06/10/2026) está deployada em
+-- produção, mas NADA a chama: não há job em cron.job (conferido em
+-- 08/10/2026 00:4x UTC — só existem publicar-posts-agendados-job,
+-- story-diario-lymphatic-gigi e ceifar-jobs-orfaos). Sem agendamento, o
+-- bucket `posta-ai-media` só cresce: 686 MB de 1 GB do Free em 07/10/2026,
+-- 428 MB só de 1º a 7/10.
+--
+-- ⚠️ EXPECTATIVA REAL: no dia 07/10 a regra de 30 dias liberaria 0 MB
+-- (`select * from public.rpc_midia_expirada(30)` → 0 linhas). As publicações
+-- são quase todas de outubro: o ganho começa ~30 dias depois de cada post
+-- publicado. Este job sozinho NÃO impede bater 1 GB nas próximas semanas.
+--
+-- O QUE O JOB FAZ
+-- Uma vez por dia, 06:00 UTC (03:00 America/Recife), chama a função em modo
+-- "apagar". A própria função já limita a 200 arquivos por execução e só
+-- apaga o que `rpc_midia_expirada` (piso de 30 dias, publicado, sem rodízio
+-- de story ativo) devolve. Quem decide O QUE apagar continua sendo o banco.
+--
+-- 📌 ANTES DE LIGAR, uma vez, em modo "listar" (não apaga nada):
+--   curl -s -X POST https://<REF_DO_PROJETO>.supabase.co/functions/v1/limpar-midia-publicada \
+--     -H "Authorization: Bearer <ANON_KEY_DO_PROJETO>" -H "Content-Type: application/json" \
+--     -d '{"modo":"listar"}'
+-- e a Luciana confere a lista. Só depois descomentar o bloco abaixo.
+--
+-- 📌 ANON key, nunca service_role, no comando do cron (mesma razão da 0002:
+-- o comando fica em texto puro em cron.job). A função pega a service_role
+-- do ambiente do runtime.
+--
+-- Não ligar em réplica de desenvolvimento (ver as 4 travas da 0002).
+-- =====================================================================
+
+
+-- select cron.schedule(
+--   'limpar-midia-publicada-diario',
+--   '0 6 * * *',
+--   $$
+--   select net.http_post(
+--     url     := 'https://<REF_DO_PROJETO>.supabase.co/functions/v1/limpar-midia-publicada',
+--     headers := jsonb_build_object(
+--                  'Content-Type',  'application/json',
+--                  'Authorization', 'Bearer <ANON_KEY_DO_PROJETO>'
+--                ),
+--     body    := '{"modo":"apagar"}'::jsonb,
+--     timeout_milliseconds := 120000
+--   );
+--   $$
+-- );
+
+-- Desligar:  select cron.unschedule('limpar-midia-publicada-diario');
+-- Conferir:  select status, return_message, start_time from cron.job_run_details
+--            where jobid = (select jobid from cron.job where jobname = 'limpar-midia-publicada-diario')
+--            order by start_time desc limit 5;
