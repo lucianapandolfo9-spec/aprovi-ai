@@ -141,7 +141,10 @@ function renderBrandPanel(){
           </div>
           <div class="muted" style="margin-top:6px;">Fuso: ${esc(b.timezone)} · Idioma: ${esc(b.idioma)} · @${esc(b.handle||'—')}</div>
         </div>
-        <button class="btn btn-outline" style="padding:6px 10px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeleteBrand()">Excluir marca</button>
+        <div class="row" style="gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 10px;" onclick="openEditBrand()">Editar marca</button>
+          <button class="btn btn-outline" style="padding:6px 10px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeleteBrand()">Excluir marca</button>
+        </div>
       </div>
     </div>`;
 }
@@ -304,6 +307,43 @@ function openNewBrand(){
       </div>
     </div>
   </div>`;
+}
+
+function openEditBrand(){
+  const b = currentBrand;
+  document.getElementById('modal-root').innerHTML = `
+  <div class="center" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;">
+    <div class="card" style="width:420px;max-width:92vw;">
+      <h3 style="margin-top:0;">Editar marca</h3>
+      <div class="field"><label>Nome</label><input id="eb-nome" type="text" value="${esc(b.nome)}"></div>
+      <div class="field"><label>Handle Instagram</label><input id="eb-handle" type="text" value="${esc(b.handle||'')}"></div>
+      <div class="row">
+        <div class="field" style="flex:1;"><label>Fuso</label><input id="eb-tz" type="text" value="${esc(b.timezone)}"></div>
+        <div class="field" style="flex:1;"><label>Idioma</label><input id="eb-lang" type="text" value="${esc(b.idioma)}"></div>
+      </div>
+      <div class="muted" style="margin-bottom:12px;">O link secreto de aprovação não muda.</div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveBrand()">Salvar</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function saveBrand(){
+  const p = {
+    p_brand_id: currentBrand.id,
+    p_nome: document.getElementById('eb-nome').value.trim(),
+    p_handle: document.getElementById('eb-handle').value.trim().replace(/^@/,''),
+    p_timezone: document.getElementById('eb-tz').value.trim(),
+    p_idioma: document.getElementById('eb-lang').value.trim()
+  };
+  if(!p.p_nome){ toast('Dá um nome pra marca.'); return; }
+  const { error } = await postaAiClient.rpc('posta_ai_admin_update_brand', p);
+  if(error){ toast('Erro: '+error.message); return; }
+  closeModal();
+  toast('Marca atualizada.');
+  await loadBrands();
 }
 
 async function createBrand(){
