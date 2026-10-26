@@ -141,7 +141,10 @@ function renderBrandPanel(){
           </div>
           <div class="muted" style="margin-top:6px;">Fuso: ${esc(b.timezone)} · Idioma: ${esc(b.idioma)} · @${esc(b.handle||'—')}</div>
         </div>
-        <button class="btn btn-outline" style="padding:6px 10px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeleteBrand()">Excluir marca</button>
+        <div class="row" style="gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 10px;" onclick="openEditBrand()">Editar marca</button>
+          <button class="btn btn-outline" style="padding:6px 10px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeleteBrand()">Excluir marca</button>
+        </div>
       </div>
     </div>`;
 }
@@ -294,7 +297,7 @@ function openNewBrand(){
       <div class="field"><label>Nome</label><input id="nb-nome" type="text" placeholder="Lymphatic by Gigi"></div>
       <div class="field"><label>Handle Instagram</label><input id="nb-handle" type="text" placeholder="lymphaticbygigi"></div>
       <div class="row">
-        <div class="field" style="flex:1;"><label>Fuso</label><input id="nb-tz" type="text" value="America/Los_Angeles"></div>
+        <div class="field" style="flex:1;"><label>Fuso</label><select id="nb-tz">${fusoOptions('America/Los_Angeles')}</select></div>
         <div class="field" style="flex:1;"><label>Idioma</label><input id="nb-lang" type="text" value="en"></div>
       </div>
       <div class="field"><label>Assinatura padrão</label><textarea id="nb-sig" placeholder="Authentic Brazilian Lymphatic method&#10;DM me @lymphaticbygigi 📩&#10;Los Angeles · In-Home & In-Studio"></textarea></div>
@@ -306,12 +309,74 @@ function openNewBrand(){
   </div>`;
 }
 
+// Fusos IANA válidos (o Postgres rejeita nome fora do padrão, ex: "Brasil/Recife").
+const FUSOS = ['America/Recife','America/Sao_Paulo','America/Fortaleza','America/Bahia','America/Belem','America/Manaus','America/Cuiaba','America/Noronha','America/Rio_Branco','America/Los_Angeles','America/New_York','America/Chicago','America/Denver','Europe/Lisbon','Europe/London','UTC'];
+function fusoValido(tz){ try { new Intl.DateTimeFormat('en',{timeZone:tz}); return true; } catch(e){ return false; } }
+function fusoOptions(atual){
+  const lista = FUSOS.slice();
+  if(atual && fusoValido(atual) && !lista.includes(atual)) lista.push(atual);
+  const sel = lista.includes(atual) ? atual : lista[0];
+  return lista.map(z => `<option value="${esc(z)}"${z===sel?' selected':''}>${esc(z)}</option>`).join('');
+}
+
+async function openEditBrand(){
+  const b = currentBrand;
+  const { data: assinatura } = await postaAiClient.rpc('posta_ai_admin_get_caption_block', { p_brand_id: b.id });
+  const temAssinatura = typeof assinatura === 'string';
+  const tzInvalido = !fusoValido(b.timezone);
+  document.getElementById('modal-root').innerHTML = `
+  <div class="center" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40;">
+    <div class="card" style="width:420px;max-width:92vw;max-height:88vh;overflow:auto;">
+      <h3 style="margin-top:0;">Editar marca</h3>
+      <div class="field"><label>Nome</label><input id="eb-nome" type="text" maxlength="120" value="${esc(b.nome)}"></div>
+      <div class="field"><label>Handle Instagram (sem @)</label><input id="eb-handle" type="text" maxlength="31" value="${esc(b.handle||'')}"></div>
+      <div class="row">
+        <div class="field" style="flex:1;"><label>Fuso</label><select id="eb-tz">${fusoOptions(b.timezone)}</select></div>
+        <div class="field" style="flex:1;"><label>Idioma</label><input id="eb-lang" type="text" placeholder="pt-BR" value="${esc(b.idioma)}"></div>
+      </div>
+      ${tzInvalido ? `<div class="muted" style="margin-bottom:12px;color:var(--vermelho);">O fuso gravado ("${esc(b.timezone)}") não é válido. Escolha um da lista e salve.</div>` : ''}
+      ${temAssinatura ? `<div class="field"><label>Assinatura padrão</label><textarea id="eb-sig">${esc(assinatura)}</textarea></div>` : ''}
+      <div class="muted" style="margin-bottom:12px;">O link secreto de aprovação não muda.</div>
+      <div class="row" style="justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal()">Cancelar</button>
+        <button id="eb-save" class="btn btn-primary" onclick="saveBrand()">Salvar</button>
+      </div>
+    </div>
+  </div>`;
+  window._ebAssinaturaOriginal = temAssinatura ? assinatura : null;
+}
+
+async function saveBrand(){
+  const p = {
+    p_brand_id: currentBrand.id,
+    p_nome: document.getElementById('eb-nome').value.trim(),
+    p_handle: document.getElementById('eb-handle').value.trim().replace(/^@/,''),
+    p_timezone: document.getElementById('eb-tz').value,
+    p_idioma: document.getElementById('eb-lang').value.trim()
+  };
+  if(!p.p_nome){ toast('Dá um nome pra marca.'); return; }
+  if(p.p_handle && !/^[A-Za-z0-9._]{1,30}$/.test(p.p_handle)){ toast('Handle sem @ e sem espaço (letras, números, ponto e _).'); return; }
+  if(p.p_idioma && !/^[a-z]{2,3}(-[A-Z]{2})?$/.test(p.p_idioma)){ toast('Idioma no formato pt, en ou pt-BR.'); return; }
+  const btn = document.getElementById('eb-save');
+  btn.disabled = true;
+  const { error } = await postaAiClient.rpc('posta_ai_admin_update_brand', p);
+  if(error){ btn.disabled = false; toast('Erro: '+error.message); return; }
+  const sigEl = document.getElementById('eb-sig');
+  if(sigEl && sigEl.value !== window._ebAssinaturaOriginal){
+    const { error: e2 } = await postaAiClient.rpc('posta_ai_admin_set_caption_block', { p_brand_id: currentBrand.id, p_conteudo: sigEl.value });
+    if(e2){ closeModal(); toast('Marca salva, mas a assinatura falhou: '+e2.message); await loadBrands(); return; }
+  }
+  closeModal();
+  toast('Marca atualizada.');
+  await loadBrands();
+}
+
 async function createBrand(){
   const p = {
     p_workspace_nome: document.getElementById('nb-ws').value.trim(),
     p_nome: document.getElementById('nb-nome').value.trim(),
     p_handle: document.getElementById('nb-handle').value.trim(),
-    p_timezone: document.getElementById('nb-tz').value.trim(),
+    p_timezone: document.getElementById('nb-tz').value,
     p_idioma: document.getElementById('nb-lang').value.trim(),
     p_assinatura: document.getElementById('nb-sig').value
   };
