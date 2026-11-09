@@ -10,8 +10,27 @@
 <meta name="description" content="Aprove ou peça ajuste nos conteúdos antes de irem pro ar.">
 <link rel="stylesheet" href="style.css">
 
-<!-- PWA -->
-<link rel="manifest" href="manifest-cliente.webmanifest">
+<!-- PWA
+     O manifest entra por script, e NÃO entra no iPhone/iPad, de propósito.
+     Android: instala pelo manifest (start_url ./cliente.html, sem token) e o app
+     instalado divide o storage com o Chrome, então o token guardado no
+     localStorage na primeira visita é reaplicado (ver bloco TOKEN).
+     iOS: o app da Tela de Início tem storage SEPARADO do Safari (o localStorage
+     chega vazio). Se o iOS usasse o start_url do manifest, o cliente instalaria
+     e abriria numa tela sem token. Sem manifest, o iOS salva a URL atual — com o
+     ?t= — e usa as metas apple-* abaixo pra ícone, título e tela cheia.
+     O token nunca vai pro manifest (no Android ele seria enviado ao servidor que
+     gera o WebAPK) nem pro cache do service worker. -->
+<script>
+(function(){
+  var ua = navigator.userAgent || '';
+  var ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (ios) return;
+  var l = document.createElement('link');
+  l.rel = 'manifest'; l.href = 'manifest-cliente.webmanifest';
+  document.head.appendChild(l);
+})();
+</script>
 <meta name="theme-color" content="#12081A">
 <meta name="color-scheme" content="dark">
 <!-- iOS ignora o manifest pra ícone e título: precisa destas metas -->
@@ -44,9 +63,10 @@ const appEl = document.getElementById('app');
 const brandLabel = document.getElementById('brand-label');
 
 // ---------- TOKEN ----------
-// Instalado como app no iPhone, a tela pode abrir pelo start_url do manifest
+// Instalado como app no Android, a tela abre pelo start_url do manifest
 // (./cliente.html, sem ?t=). Então o token do link é guardado na primeira
 // visita e reusado quando a query vier vazia. O ?t= da URL sempre ganha.
+// (No iPhone o app instalado guarda a URL com ?t=; ver comentário do manifest.)
 // Nota: o token só fica no aparelho de quem já tinha o link — ele já está no
 // histórico e no atalho do navegador; o localStorage não amplia o acesso.
 const CHAVE_TOKEN = 'aprovi_token';
@@ -136,7 +156,10 @@ async function loadFeed(){
     return;
   }
   if(!TOKEN){
-    appEl.innerHTML = `<div class="empty">Link inválido. Peça o link certo pra Luciana.</div>`;
+    const instalado = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    appEl.innerHTML = instalado
+      ? `<div class="empty">Não achei o seu link neste app.<br>Abra pelo navegador o link que a Luciana te mandou e instale de novo a partir dele.</div>`
+      : `<div class="empty">Link inválido. Peça o link certo pra Luciana.</div>`;
     return;
   }
   const { data, error } = await postaAiClient.rpc('posta_ai_client_feed', { p_token: TOKEN });

@@ -504,9 +504,21 @@ aqui faria ela **aprovar conteúdo velho** — o pior erro possível neste produ
 A chave de cache também **descarta a query string**, então o `?t=<secret_token>`
 nunca é gravado no Cache Storage.
 
-🔴 **Token do cliente no `localStorage`.** Instalado como app, o iPhone pode abrir
-pelo `start_url` do manifest — sem o `?t=`. Então o token é guardado na primeira
-visita e reusado quando a query vier vazia (`?t=` da URL sempre ganha). Efeito
+🔴 **Token do cliente no app instalado — dois caminhos (09/11/2026).**
+- **Android:** instala pelo manifest, `start_url: ./cliente.html` (sem `?t=`). O app
+  instalado divide o storage com o Chrome, então o token guardado no `localStorage`
+  na primeira visita é reaplicado (`?t=` da URL sempre ganha).
+- **iPhone/iPad:** o app da Tela de Início tem storage **separado** do Safari (o
+  `localStorage` chega vazio). Por isso o `cliente.html` **não injeta o manifest no
+  iOS** (o `<link rel=manifest>` entra por script, pulando iOS): sem manifest, o iOS
+  salva a **URL atual, com o `?t=`**, e usa as metas `apple-*` pra ícone, título e
+  tela cheia. Não depende de qual versão do iOS respeita ou não o `start_url`.
+- **Nunca** pôr o token no manifest (manifest dinâmico): no Android o manifest vai
+  pro servidor do Google que gera o WebAPK. E o SW descarta a query string do cache.
+- Aberto instalado e sem token nenhum: a tela diz pra abrir o link pelo navegador
+  e instalar de novo a partir dele.
+
+Efeito
 colateral conhecido: **abrir o link de outra marca no mesmo aparelho sobrescreve
 o token**, e o app instalado passa a abrir a marca nova. Com uma marca por
 aparelho não incomoda; com duas, incomoda.
