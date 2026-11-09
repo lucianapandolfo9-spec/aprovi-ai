@@ -64,10 +64,14 @@ function renderLogin(){
   <div class="topbar"><div class="brandmark"><span class="dot"></span> aprovi<span class="panda">.ai</span></div></div>
   <div class="login-box card">
     <h2 style="margin-top:0;">Entrar</h2>
-    <p class="muted">Link mágico direto pro seu e-mail.</p>
+    <p class="muted">Enviamos um código e um link pro seu e-mail. No app instalado, use o código.</p>
     <div class="stack">
       <input type="email" id="login-email" placeholder="seu@email.com" value="${POSTA_AI_ADMIN_EMAIL}">
-      <button class="btn btn-primary" onclick="doLogin()">Enviar link de acesso</button>
+      <button class="btn btn-primary" onclick="doLogin()">Enviar código de acesso</button>
+      <div id="login-code-box" class="stack" style="display:none;">
+        <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="código do e-mail" style="letter-spacing:4px;text-align:center;font-size:20px;">
+        <button class="btn btn-primary" onclick="doVerifyCode()">Entrar com o código</button>
+      </div>
       <div id="login-msg" class="muted"></div>
     </div>
   </div>`;
@@ -80,7 +84,20 @@ async function doLogin(){
   const { error } = await postaAiClient.auth.signInWithOtp({
     email, options:{ emailRedirectTo: location.href.split('?')[0].split('#')[0] }
   });
-  msg.textContent = error ? 'Erro ao enviar. Tenta de novo.' : 'Link enviado — confere seu e-mail.';
+  if(error){ msg.textContent = 'Erro ao enviar. Tenta de novo.'; return; }
+  msg.textContent = 'Enviado. Digite o código do e-mail aqui (ou toque no link, se estiver no navegador).';
+  document.getElementById('login-code-box').style.display = '';
+  document.getElementById('login-code').focus();
+}
+
+async function doVerifyCode(){
+  const email = document.getElementById('login-email').value.trim();
+  const token = document.getElementById('login-code').value.replace(/\D/g,'');
+  const msg = document.getElementById('login-msg');
+  if(token.length < 6){ msg.textContent = 'Digite o código completo que chegou no e-mail.'; return; }
+  msg.textContent = 'Conferindo...';
+  const { error } = await postaAiClient.auth.verifyOtp({ email, token, type:'email' });
+  msg.textContent = error ? 'Código inválido ou vencido. Peça um novo.' : '';
 }
 
 async function logout(){
