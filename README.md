@@ -76,6 +76,11 @@ silêncio.
 ```
 .
 ├── index.html  cliente.html  config.js  style.css  CNAME   ← front
+├── manifest.webmanifest            ← PWA do painel (start_url index.html)
+├── manifest-cliente.webmanifest    ← PWA da tela de aprovação (start_url cliente.html)
+├── sw.js                           ← service worker: SÓ app shell, nunca Supabase
+├── favicon.ico
+├── assets/                         ← ícones do panda (SVG próprio + PNGs 192/512/maskable)
 ├── PROJETO.md                      ← documento mestre: decisões e pendências
 ├── README.md                       ← este arquivo
 └── supabase/
@@ -326,6 +331,21 @@ tentativas.
 **Nunca persista a `service_role` key em disco.** Ela ignora RLS em todas as
 tabelas de todos os clientes. A Edge Function `emitir-url-upload` existe
 exatamente para que ninguém precise dela num script local.
+
+**O service worker não pode encostar no Supabase.** `sw.js` só intercepta GET
+da **própria origem** e usa network-first. Se alguém colocar resposta de RPC ou
+mídia do Storage nesse cache, a tela passa a mostrar conteúdo velho e a aprovação
+vira mentira. A chave de cache também descarta a query string, pra que o
+`?t=<secret_token>` nunca seja gravado.
+
+**Sufixo de título é contrato.** `cliente.html` identifica story derivado lendo
+`— Story (auto)` e `— Story (rodízio)` do `titulo_interno`, porque
+`posta_ai_client_feed` não devolve `post_origem_id` nem `story_rodizio_de`.
+Mudar o texto do sufixo no SQL quebra o aviso da tela em silêncio.
+
+**`magick` não renderiza esses SVGs.** O renderizador interno do ImageMagick
+descarta `transform="rotate(...)"` em `<ellipse>` — o panda sai sem as manchas
+dos olhos e ninguém percebe. Os PNGs de ícone saem do **Chrome headless**.
 
 ---
 

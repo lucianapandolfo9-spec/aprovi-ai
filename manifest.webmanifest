@@ -1,0 +1,19 @@
+{
+  "id": "aprovi-painel",
+  "name": "aprovi.ai — painel",
+  "short_name": "aprovi painel",
+  "description": "Painel interno do aprovi.ai: marcas, conteúdos, aprovações e agendamento.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "theme_color": "#12081A",
+  "background_color": "#12081A",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
