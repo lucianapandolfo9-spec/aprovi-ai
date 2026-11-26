@@ -1,12 +1,19 @@
 # aprovi.ai
 
-Aprovação e publicação automática de conteúdo social. A editora sobe o vídeo e
-escreve a legenda; o cliente aprova por um link secreto, sem login; o sistema
-publica sozinho no Instagram na hora marcada.
+Plataforma de aprovação e publicação de conteúdo para agências e marcas. A
+agência sobe o vídeo e escreve a legenda; o cliente da agência aprova por um
+link secreto, sem login, e escolhe ali as opções de publicação; o sistema
+publica sozinho na hora marcada, no Instagram, no Facebook, no TikTok e no
+YouTube Shorts, só nas contas que o dono conectou.
 
-Ferramenta interna da **Lotta** e da [Luh Panda](https://luhpanda.com.br). Não é vendida como
-produto — decisão de 11/set/2026, registrada no `PROJETO.md`. Isso muda a
-prioridade: vale o que reduz trabalho manual, não o que deixaria vendável.
+Mantida pela [Luh Panda](https://luhpanda.com.br) e usada pela agência Lotta
+para publicar nas contas dos clientes dela, além de marcas próprias. Cada marca
+conecta as próprias contas (multi-marca desde a primeira tabela).
+
+> Posicionamento atualizado em 26/11/2026: a decisão de 11/set/2026 ("ferramenta
+> interna, não vendida como produto") deixou de valer quando o aprovi.ai passou
+> a publicar para clientes de terceiros (agência Lotta). Termos e privacidade:
+> [`termos.html`](termos.html) · [`privacidade.html`](privacidade.html).
 
 - **Painel da editora:** `index.html` — login por e-mail, gestão de marcas, kanban, upload, edição de legenda
 - **Portal do cliente:** `cliente.html?t=<token>` — sem login; a autorização é o token na URL
