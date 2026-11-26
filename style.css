@@ -1,26 +1,36 @@
 :root{
-  --fundo:#12081A;
-  --card:#1E1028;
-  --card-borda:#3A2249;
-  --roxo:#6F2E8F;
-  --roxo-escuro:#4A1B5C;
-  --roxo-claro:#8B4BA3;
-  --laranja:#FF6B35;
-  --verde:#25D366;
-  --vermelho:#E5484D;
-  --texto:#F2EAF7;
-  --texto-suave:#C4B2D1;
+  /* Cores da Lotta (design system do site agencialotta.com.br, tokens --lt-*).
+     Os nomes antigos ficam como apelido pra não espalhar troca pelo código. */
+  --fundo:#0b0215;        /* lt-color-bg */
+  --fundo-2:#130524;      /* lt-color-bg-secondary: campos, comentários */
+  --card:#1a0731;         /* lt-color-surface */
+  --card-alto:#251044;    /* lt-color-surface-raised */
+  --card-borda:#3d1a6b;   /* lt-color-border */
+  --roxo:#68006f;         /* lt-color-brand: roxo da marca */
+  --roxo-vivo:#7a00d6;    /* lt-color-brand-bright */
+  --roxo-escuro:#560873;  /* plum */
+  --roxo-claro:#9943d0;   /* lt-color-border-strong: foco e detalhe */
+  --lilas:#da65f7;        /* lt-color-lilac */
+  --amarelo:#ffd600;      /* lt-color-yellow: destaque (era o laranja) */
+  --amarelo-hover:#ffe752;
+  --verde:#22c55e;        /* lt-color-success */
+  --vermelho:#ff4d6d;     /* lt-color-error */
+  --texto:#ffffff;
+  --texto-suave:#d1c2e6;  /* lt-color-text-secondary */
+  --texto-fraco:#aa97bd;  /* lt-color-text-muted */
   --radius:14px;
 }
 *{box-sizing:border-box;}
+/* botão e campo não herdam a fonte sozinhos: sem isto ficam na fonte do sistema */
+button,input,textarea,select{font-family:inherit;}
 html,body{margin:0;padding:0;}
 body{
   background:var(--fundo);
   color:var(--texto);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-family:"Montserrat",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
   min-height:100vh;
 }
-a{color:var(--laranja);}
+a{color:var(--amarelo);}
 /* padding-bottom com safe-area: no iPhone instalado como app a barra de
    gestos come o fim da página se não reservar o espaço. */
 .wrap{
@@ -37,28 +47,28 @@ a{color:var(--laranja);}
           16px calc(20px + env(safe-area-inset-left));
 }
 .brandmark{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;}
-.brandmark .dot{width:10px;height:10px;border-radius:50%;background:var(--laranja);}
-.brandmark .panda{color:var(--laranja);}
+.brandmark .dot{width:10px;height:10px;border-radius:50%;background:var(--amarelo);}
+.brandmark .acento{color:var(--amarelo);}
 .btn{
   appearance:none;border:none;border-radius:10px;padding:10px 18px;
   font-size:14px;font-weight:600;cursor:pointer;transition:filter .15s ease,transform .05s ease;
 }
 .btn:active{transform:scale(.98);}
-.btn-primary{background:linear-gradient(135deg,var(--roxo-claro),var(--roxo-escuro));color:#fff;}
+.btn-primary{background:linear-gradient(135deg,var(--roxo-vivo),var(--roxo));color:#fff;}
 .btn-primary:hover{filter:brightness(1.1);}
 .btn-outline{background:transparent;border:1px solid var(--card-borda);color:var(--texto);}
 .btn-outline:hover{border-color:var(--roxo-claro);}
-.btn-approve{background:var(--verde);color:#06210f;}
+.btn-approve{background:var(--verde);color:#052e14;}
 .btn-approve:hover{filter:brightness(1.08);}
-.btn-adjust{background:transparent;border:1px solid var(--laranja);color:var(--laranja);}
-.btn-adjust:hover{background:rgba(255,107,53,.1);}
+.btn-adjust{background:transparent;border:1px solid var(--amarelo);color:var(--amarelo);}
+.btn-adjust:hover{background:rgba(255,214,0,.1);}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
 .card{
   background:var(--card);border:1px solid var(--card-borda);border-radius:var(--radius);
   padding:18px;
 }
 input[type=text],input[type=email],input[type=datetime-local],textarea,select{
-  width:100%;background:#160B1F;border:1px solid var(--card-borda);border-radius:10px;
+  width:100%;background:var(--fundo-2);border:1px solid var(--card-borda);border-radius:10px;
   color:var(--texto);padding:10px 12px;font-size:14px;font-family:inherit;
   outline:none;
 }
@@ -71,13 +81,13 @@ label{display:block;font-size:12px;color:var(--texto-suave);margin-bottom:6px;fo
   font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
   white-space:nowrap;
 }
-.tag-rascunho{background:#332038;color:#B79BC4;}
-.tag-em_aprovacao{background:#3A2E14;color:#E7B84E;}
-.tag-ajuste_pedido{background:#3A1A16;color:#E5484D;}
-.tag-aprovado{background:#123A24;color:#3FC985;}
+.tag-rascunho{background:#311451;color:#d1c2e6;}
+.tag-em_aprovacao{background:#3a3105;color:#ffd600;}
+.tag-ajuste_pedido{background:#3d0f1c;color:#ff7a93;}
+.tag-aprovado{background:#0f3320;color:#4ade80;}
 .tag-agendado{background:#122B3A;color:#4EB4E7;}
 .tag-publicado{background:#1D3A12;color:#7FD858;}
-.tag-falhou{background:#3A1212;color:#E5484D;}
+.tag-falhou{background:#3d0f1c;color:#ff7a93;}
 .muted{color:var(--texto-suave);font-size:13px;}
 .center{display:flex;align-items:center;justify-content:center;}
 .login-box{max-width:380px;margin:14vh auto;padding:32px;text-align:center;}
@@ -89,10 +99,10 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
 .kanban-col h3{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--texto-suave);margin:0 0 10px;}
 .post-card{margin-bottom:12px;}
 .post-card h4{margin:10px 0 4px;font-size:15px;}
-.comment{background:#160B1F;border-radius:8px;padding:8px 10px;font-size:13px;margin-top:6px;}
+.comment{background:var(--fundo-2);border-radius:8px;padding:8px 10px;font-size:13px;margin-top:6px;}
 .comment b{color:var(--roxo-claro);}
 .copylink{
-  display:flex;gap:8px;align-items:center;background:#160B1F;border:1px solid var(--card-borda);
+  display:flex;gap:8px;align-items:center;background:var(--fundo-2);border:1px solid var(--card-borda);
   border-radius:10px;padding:8px 10px;font-size:12px;color:var(--texto-suave);word-break:break-all;
 }
 .pending-post{margin-bottom:28px;}
@@ -104,7 +114,7 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
 .history-item .tag{flex:0 0 auto;align-self:flex-start;}
 .history-item:last-child{border-bottom:none;}
 .empty{text-align:center;padding:60px 20px;color:var(--texto-suave);}
-.spinner{width:22px;height:22px;border:3px solid var(--card-borda);border-top-color:var(--laranja);border-radius:50%;animation:spin .7s linear infinite;}
+.spinner{width:22px;height:22px;border:3px solid var(--card-borda);border-top-color:var(--amarelo);border-radius:50%;animation:spin .7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .toast{
   position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
@@ -123,8 +133,8 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
   font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;
   border:1px solid transparent;white-space:nowrap;
 }
-.selo-carrossel{background:rgba(255,107,53,.14);color:var(--laranja);border-color:rgba(255,107,53,.45);}
-.selo-reel{background:rgba(139,75,163,.22);color:#D9AFEA;border-color:rgba(139,75,163,.55);}
+.selo-carrossel{background:rgba(255,214,0,.12);color:var(--amarelo);border-color:rgba(255,214,0,.45);}
+.selo-reel{background:rgba(218,101,247,.16);color:#ecb4fb;border-color:rgba(218,101,247,.5);}
 .selo-feed{background:rgba(78,180,231,.14);color:#86CBF1;border-color:rgba(78,180,231,.42);}
 .selo-story{background:rgba(63,201,133,.13);color:#63DBA3;border-color:rgba(63,201,133,.4);}
 .selo-sm{font-size:10px;padding:2px 8px;}
@@ -144,7 +154,7 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
 .slide{
   flex:0 0 100%;scroll-snap-align:start;scroll-snap-stop:always;
   aspect-ratio:var(--ar,4 / 5);max-height:68vh;
-  background:#0A0410;border-radius:10px;overflow:hidden;
+  background:#100018;border-radius:10px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
 }
 .slide img,.slide video{
@@ -153,7 +163,7 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
 }
 .media-badge{
   position:absolute;top:10px;right:10px;z-index:2;pointer-events:none;
-  background:rgba(10,4,16,.84);border:1px solid rgba(245,240,234,.2);
+  background:rgba(11,2,21,.84);border:1px solid rgba(245,240,234,.2);
   color:var(--texto);border-radius:999px;padding:4px 11px;
   font-size:12px;font-weight:700;letter-spacing:.3px;
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
@@ -163,12 +173,12 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
   width:7px;height:7px;border-radius:50%;background:var(--card-borda);
   display:block;cursor:pointer;transition:background .15s ease,width .15s ease;
 }
-.dots i.on{background:var(--laranja);width:20px;border-radius:999px;}
+.dots i.on{background:var(--amarelo);width:20px;border-radius:999px;}
 .swipe-hint{text-align:center;font-size:12px;color:var(--texto-suave);margin-top:7px;}
 .origem{
   font-size:12.5px;line-height:1.45;color:var(--texto-suave);
   margin:8px 0 0;padding:8px 10px;border-radius:8px;
-  background:#160B1F;border-left:3px solid var(--roxo-claro);
+  background:var(--fundo-2);border-left:3px solid var(--roxo-claro);
 }
 .origem b{color:var(--texto);font-weight:600;}
 .head-selos{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:9px;}
@@ -190,13 +200,13 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
    TUTORIAL "INSTALAR NO CELULAR" — faixa no topo do feed do cliente.
    Só aparece no celular e fora do app instalado (lógica no cliente.html).
    ===================================================================== */
-.instalar{margin-bottom:24px;border-color:rgba(255,107,53,.45);
-  background:linear-gradient(160deg,rgba(255,107,53,.10),rgba(111,46,143,.18) 60%),var(--card);}
+.instalar{margin-bottom:24px;border-color:rgba(255,214,0,.45);
+  background:linear-gradient(160deg,rgba(255,214,0,.08),rgba(104,0,111,.30) 60%),var(--card);}
 .instalar-topo{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
 .instalar-topo img{border-radius:11px;flex:0 0 auto;}
 .instalar-topo h4{margin:2px 0 4px;font-size:16px;}
 .instalar-topo p{margin:0;line-height:1.4;}
-.instalar-aviso{background:#3A2E14;color:#F1D18A;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:12px;}
+.instalar-aviso{background:#3a3105;color:#ffe46b;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:12px;}
 .instalar-cta{width:100%;padding:14px 16px;font-size:15px;}
 .instalar-ou{text-align:center;margin:10px 0 2px;font-size:12px;}
 .instalar-passos{margin:8px 0 14px;padding-left:22px;line-height:1.5;font-size:14px;}
@@ -206,8 +216,8 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
 .instalar-acoes .btn{flex:1 1 160px;}
 .instalar-fechar{background:transparent;color:var(--texto-suave);}
 .instalar-link{text-align:center;margin-top:28px;}
-.instalar-link button{background:none;border:none;color:var(--laranja);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px;}
-.instalar-modal{position:fixed;inset:0;z-index:60;background:rgba(10,4,14,.86);
+.instalar-link button{background:none;border:none;color:var(--amarelo);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px;}
+.instalar-modal{position:fixed;inset:0;z-index:60;background:rgba(11,2,21,.88);
   display:flex;align-items:center;justify-content:center;
   padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));}
 .instalar-modal-box{width:min(380px,100%);}

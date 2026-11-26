@@ -4,11 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>aprovi.ai — painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#12081A">
+<meta name="theme-color" content="#0b0215">
 <meta name="color-scheme" content="dark">
 <!-- iOS ignora o manifest pra ícone e título: precisa destas metas -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -61,7 +64,7 @@ async function init(){
 
 function renderLogin(){
   root.innerHTML = `
-  <div class="topbar"><div class="brandmark"><span class="dot"></span> aprovi<span class="panda">.ai</span></div></div>
+  <div class="topbar"><div class="brandmark"><span class="dot"></span> aprovi<span class="acento">.ai</span></div></div>
   <div class="login-box card">
     <h2 style="margin-top:0;">Entrar</h2>
     <p class="muted">Enviamos um código e um link pro seu e-mail. No app instalado, use o código.</p>
@@ -111,7 +114,7 @@ async function render(){
 
   root.innerHTML = `
   <div class="topbar">
-    <div class="brandmark"><span class="dot"></span> aprovi<span class="panda">.ai</span></div>
+    <div class="brandmark"><span class="dot"></span> aprovi<span class="acento">.ai</span></div>
     <div class="row">
       <span class="muted">${esc(session.user.email)}</span>
       <button class="btn btn-outline" onclick="logout()">Sair</button>

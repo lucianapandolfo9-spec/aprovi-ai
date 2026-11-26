@@ -8,6 +8,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>aprovi.ai — aprovação de conteúdo</title>
 <meta name="description" content="Aprove ou peça ajuste nos conteúdos antes de irem pro ar.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="style.css">
 
 <!-- PWA
@@ -31,7 +34,7 @@
   document.head.appendChild(l);
 })();
 </script>
-<meta name="theme-color" content="#12081A">
+<meta name="theme-color" content="#0b0215">
 <meta name="color-scheme" content="dark">
 <!-- iOS ignora o manifest pra ícone e título: precisa destas metas -->
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -48,7 +51,7 @@
 <body>
 
 <div class="topbar">
-  <div class="brandmark"><span class="dot"></span> aprovi<span class="panda">.ai</span></div>
+  <div class="brandmark"><span class="dot"></span> aprovi<span class="acento">.ai</span></div>
   <div class="muted" id="brand-label"></div>
 </div>
 
@@ -189,7 +192,7 @@ function render(posts){
   </div>`;
 
   if(pending.length === 0){
-    html += `<div class="empty">Nenhum conteúdo esperando aprovação agora. 🐼</div>`;
+    html += `<div class="empty">Nenhum conteúdo esperando aprovação agora.</div>`;
   } else {
     html += `<h3 style="color:var(--texto-suave);font-size:13px;text-transform:uppercase;letter-spacing:.5px;">Esperando você</h3>`;
     pending.forEach(p => { html += postCard(p); });
@@ -389,7 +392,7 @@ window.addEventListener('appinstalled', () => {
   INSTALAR.promptNativo = null;
   INSTALAR.instalado = true;
   rerenderInstalar();
-  toast('Instalado! Agora é só abrir pelo ícone do panda. 🐼');
+  toast('Instalado! Agora é só abrir pelo ícone do aprovi na sua tela.');
 });
 // Vídeo só aparece se o arquivo existir (HEAD não passa pelo service worker).
 if(INSTALAR.celular && !INSTALAR.instalado){
@@ -404,27 +407,27 @@ function passosInstalar(){
     return [
       'Toque no botão <b>Compartilhar</b> <span class="ico">⬆︎</span> ao lado do endereço, lá em cima.',
       'Toque em <b>Adicionar à Tela de Início</b>. Se não aparecer, toque em <b>Mais</b> e procure na lista.',
-      'Toque em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+      'Toque em <b>Adicionar</b>. Pronto, o ícone do aprovi aparece na sua tela.'
     ];
   }
   if(I.ios){
     return [
       'Na barra do Safari, toque em <b>Compartilhar</b> <span class="ico">⬆︎</span>. Se ele não aparecer, toque antes nos <b>três pontinhos ⋯</b>.',
       'Role a lista e toque em <b>Adicionar à Tela de Início</b>.',
-      'Deixe ligado <b>Abrir como App Web</b>, se aparecer, e toque em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+      'Deixe ligado <b>Abrir como App Web</b>, se aparecer, e toque em <b>Adicionar</b>. Pronto, o ícone do aprovi aparece na sua tela.'
     ];
   }
   if(I.samsung){
     return [
       'Toque no menu <b>☰</b> no canto de baixo.',
       'Toque em <b>Adicionar página a</b> e depois em <b>Tela inicial</b>.',
-      'Confirme em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+      'Confirme em <b>Adicionar</b>. Pronto, o ícone do aprovi aparece na sua tela.'
     ];
   }
   return [
     'Toque nos <b>três pontinhos ⋮</b> no canto de cima do Chrome.',
     'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.',
-    'Confirme em <b>Instalar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+    'Confirme em <b>Instalar</b>. Pronto, o ícone do aprovi aparece na sua tela.'
   ];
 }
 
@@ -454,7 +457,7 @@ function blocoInstalar(lugar){
 
   const passos = passosInstalar().map(t => `<li>${t}</li>`).join('');
   const video = I.temVideo
-    ? `<button type="button" class="btn btn-outline" onclick="verVideoInstalar()">▶ Ver vídeo de 30 segundos</button>` : '';
+    ? `<button type="button" class="btn btn-outline" onclick="verVideoInstalar()">▶ Ver vídeo de 13 segundos</button>` : '';
 
   return `
   <div class="card instalar" id="instalar-card">
@@ -462,7 +465,7 @@ function blocoInstalar(lugar){
       <img src="assets/apple-touch-icon.png" alt="" width="44" height="44">
       <div>
         <h4>Tenha o aprovi.ai no seu celular</h4>
-        <p class="muted">Vira um app com o ícone do panda: abre num toque, já nos seus conteúdos, sem caçar o link no WhatsApp.</p>
+        <p class="muted">Vira um app na sua tela: abre num toque, já nos seus conteúdos, sem caçar o link no WhatsApp.</p>
       </div>
     </div>
     ${avisoInApp}
