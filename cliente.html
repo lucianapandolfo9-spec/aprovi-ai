@@ -178,7 +178,7 @@ function render(posts){
   const history = posts.filter(p => !(p.status === 'em_aprovacao' || p.status === 'ajuste_pedido'));
   const signature = posts.length ? posts[0].assinatura_padrao : '';
 
-  let html = '';
+  let html = blocoInstalar('topo');
 
   html += `<div class="card" style="margin-bottom:24px;">
     <label>Assinatura padrão (aparece em todo post — edite aqui e vale pra tudo que vier depois)</label>
@@ -213,6 +213,8 @@ function render(posts){
       }).join('')}
     </div>`;
   }
+
+  html += blocoInstalar('rodape');
 
   appEl.innerHTML = html;
   ligarGalerias();
@@ -345,6 +347,179 @@ async function saveSignature(){
   const { error } = await postaAiClient.rpc('posta_ai_client_update_signature', { p_token: TOKEN, p_conteudo: val });
   if(error){ toast('Não consegui salvar, tenta de novo.'); return; }
   toast('Assinatura padrão atualizada.');
+}
+
+// ---------- TUTORIAL: INSTALAR NO CELULAR ----------
+// O app já é instalável (PWA, ver PROJETO.md), mas cliente nenhum sabe disso.
+// Aqui: faixa no topo do feed com o passo a passo do aparelho detectado, botão
+// nativo no Android quando o Chrome oferece, e vídeo curto se o arquivo existir.
+// Some sozinha quando a tela já está aberta como app. "Agora não" vira um link
+// discreto no fim da página (nunca some de vez: o cliente pode querer depois).
+// Fica fora do service worker de propósito: só texto + <video> do próprio site.
+const INSTALAR = (() => {
+  const ua = navigator.userAgent || '';
+  const ios = /iP(hone|ad|od)/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const inApp = /Instagram/i.test(ua) ? 'Instagram'
+              : /FBAN|FBAV|FB_IAB/i.test(ua) ? 'Facebook'
+              : /WhatsApp/i.test(ua) ? 'WhatsApp'
+              : /\bLine\//i.test(ua) ? 'Line' : '';
+  const instalado = (window.matchMedia && matchMedia('(display-mode: standalone)').matches)
+                    || navigator.standalone === true;
+  return {
+    ios, android, inApp, instalado,
+    samsung: /SamsungBrowser/i.test(ua),
+    iosOutro: ios && /CriOS|FxiOS|EdgiOS/i.test(ua),   // Chrome/Firefox/Edge no iPhone
+    celular: ios || android,
+    video: ios ? 'assets/tutorial/instalar-iphone.mp4' : 'assets/tutorial/instalar-android.mp4',
+    temVideo: false,
+    promptNativo: null
+  };
+})();
+const CHAVE_INSTALAR = 'aprovi_instalar_fechado';
+function instalarFechado(){ try { return localStorage.getItem(CHAVE_INSTALAR) === '1'; } catch(_) { return false; } }
+
+// Android/Chrome: guarda o pedido de instalação nativo pra usar no botão.
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  INSTALAR.promptNativo = e;
+  rerenderInstalar();
+});
+window.addEventListener('appinstalled', () => {
+  INSTALAR.promptNativo = null;
+  INSTALAR.instalado = true;
+  rerenderInstalar();
+  toast('Instalado! Agora é só abrir pelo ícone do panda. 🐼');
+});
+// Vídeo só aparece se o arquivo existir (HEAD não passa pelo service worker).
+if(INSTALAR.celular && !INSTALAR.instalado){
+  fetch(INSTALAR.video, { method:'HEAD' })
+    .then(r => { if(r.ok){ INSTALAR.temVideo = true; rerenderInstalar(); } })
+    .catch(() => {});
+}
+
+function passosInstalar(){
+  const I = INSTALAR;
+  if(I.ios && I.iosOutro){
+    return [
+      'Toque no botão <b>Compartilhar</b> <span class="ico">⬆︎</span> ao lado do endereço, lá em cima.',
+      'Toque em <b>Adicionar à Tela de Início</b>. Se não aparecer, toque em <b>Mais</b> e procure na lista.',
+      'Toque em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+    ];
+  }
+  if(I.ios){
+    return [
+      'Na barra do Safari, toque em <b>Compartilhar</b> <span class="ico">⬆︎</span>. Se ele não aparecer, toque antes nos <b>três pontinhos ⋯</b>.',
+      'Role a lista e toque em <b>Adicionar à Tela de Início</b>.',
+      'Deixe ligado <b>Abrir como App Web</b>, se aparecer, e toque em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+    ];
+  }
+  if(I.samsung){
+    return [
+      'Toque no menu <b>☰</b> no canto de baixo.',
+      'Toque em <b>Adicionar página a</b> e depois em <b>Tela inicial</b>.',
+      'Confirme em <b>Adicionar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+    ];
+  }
+  return [
+    'Toque nos <b>três pontinhos ⋮</b> no canto de cima do Chrome.',
+    'Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.',
+    'Confirme em <b>Instalar</b>. Pronto, o panda do aprovi aparece na sua tela.'
+  ];
+}
+
+function blocoInstalar(lugar){
+  const I = INSTALAR;
+  if(!I.celular || I.instalado) return '';
+  const fechado = instalarFechado();
+
+  if(lugar === 'rodape'){
+    return fechado
+      ? `<div class="instalar-link"><button type="button" onclick="abrirInstalar()">📱 Instalar o aprovi.ai no celular</button></div>`
+      : '';
+  }
+  if(fechado) return '';
+
+  const nomeApp = I.inApp;
+  const avisoInApp = nomeApp ? `
+    <div class="instalar-aviso">
+      Você abriu este link dentro do <b>${nomeApp}</b>, e por aqui não dá pra instalar.
+      Toque nos <b>três pontinhos</b> (ou no ícone de bússola) e escolha
+      <b>Abrir no ${I.ios ? 'Safari' : 'navegador'}</b>. Depois siga os passos abaixo.
+    </div>` : '';
+
+  const botaoNativo = (I.promptNativo && !nomeApp)
+    ? `<button type="button" class="btn btn-primary instalar-cta" onclick="instalarAgora()">📲 Instalar agora</button>
+       <div class="muted instalar-ou">ou, se preferir, faça na mão:</div>` : '';
+
+  const passos = passosInstalar().map(t => `<li>${t}</li>`).join('');
+  const video = I.temVideo
+    ? `<button type="button" class="btn btn-outline" onclick="verVideoInstalar()">▶ Ver vídeo de 30 segundos</button>` : '';
+
+  return `
+  <div class="card instalar" id="instalar-card">
+    <div class="instalar-topo">
+      <img src="assets/apple-touch-icon.png" alt="" width="44" height="44">
+      <div>
+        <h4>Tenha o aprovi.ai no seu celular</h4>
+        <p class="muted">Vira um app com o ícone do panda: abre num toque, já nos seus conteúdos, sem caçar o link no WhatsApp.</p>
+      </div>
+    </div>
+    ${avisoInApp}
+    ${botaoNativo}
+    <ol class="instalar-passos">${passos}</ol>
+    <div class="instalar-acoes">
+      ${video}
+      <button type="button" class="btn instalar-fechar" onclick="fecharInstalar()">Agora não</button>
+    </div>
+  </div>`;
+}
+
+// Re-render só da faixa, sem recarregar o feed nem apagar o que o cliente digitou.
+function rerenderInstalar(){
+  const atual = document.getElementById('instalar-card');
+  const novo = blocoInstalar('topo');
+  if(atual){
+    if(novo) atual.outerHTML = novo; else atual.remove();
+  }
+  const link = appEl.querySelector('.instalar-link');
+  if(link && (INSTALAR.instalado || !instalarFechado())) link.remove();
+}
+async function instalarAgora(){
+  const p = INSTALAR.promptNativo;
+  if(!p) return;
+  p.prompt();
+  try { await p.userChoice; } catch(_) {}
+  INSTALAR.promptNativo = null;   // o Chrome só deixa usar uma vez
+  rerenderInstalar();
+}
+function fecharInstalar(){
+  try { localStorage.setItem(CHAVE_INSTALAR, '1'); } catch(_) {}
+  const c = document.getElementById('instalar-card');
+  if(c) c.remove();
+  if(!appEl.querySelector('.instalar-link')){
+    appEl.insertAdjacentHTML('beforeend', blocoInstalar('rodape'));
+  }
+}
+function abrirInstalar(){
+  try { localStorage.removeItem(CHAVE_INSTALAR); } catch(_) {}
+  const link = appEl.querySelector('.instalar-link');
+  if(link) link.remove();
+  appEl.insertAdjacentHTML('afterbegin', blocoInstalar('topo'));
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+function verVideoInstalar(){
+  const m = document.createElement('div');
+  m.className = 'instalar-modal';
+  m.innerHTML = `
+    <div class="instalar-modal-box">
+      <video src="${INSTALAR.video}" controls autoplay muted playsinline></video>
+      <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px;">Fechar</button>
+    </div>`;
+  const fechar = () => m.remove();
+  m.addEventListener('click', e => { if(e.target === m) fechar(); });
+  m.querySelector('button').addEventListener('click', fechar);
+  document.body.appendChild(m);
 }
 
 loadFeed();

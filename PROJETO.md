@@ -530,6 +530,27 @@ só é usado de 32px pra cima. Os PNGs são gerados pelo **Chrome headless**, n�
 pelo `magick`: o renderizador SVG interno do ImageMagick **descarta `transform:
 rotate` em `<ellipse>`** e apaga as manchas dos olhos sem avisar.
 
+### Tutorial "instalar no celular" na tela do cliente (26/11/2026)
+
+O app já instalava desde o PR #7, mas nenhum cliente sabia. Agora o `cliente.html`
+mostra uma faixa no topo do feed com o passo a passo do aparelho detectado:
+
+- Só aparece **no celular e fora do app instalado** (`display-mode: standalone` /
+  `navigator.standalone`). No computador não aparece nada.
+- Passos por navegador: Safari do iPhone (iOS 26 esconde o Compartilhar atrás do
+  `⋯`), Chrome/Firefox no iPhone, Chrome no Android, Samsung Internet.
+- **Navegador de dentro do app** (Instagram/Facebook/WhatsApp/Line): aviso pra abrir
+  no Safari/Chrome primeiro, porque dali não dá pra instalar.
+- **Android:** quando o Chrome dispara `beforeinstallprompt`, aparece o botão
+  **Instalar agora** (prompt nativo, só pode ser usado uma vez).
+- **"Agora não"** grava `aprovi_instalar_fechado` no `localStorage` e vira um link
+  discreto no fim da página, que reabre a faixa. Nunca some de vez.
+- **Vídeo:** `assets/tutorial/instalar-iphone.mp4` e `instalar-android.mp4`. O botão
+  "Ver vídeo" só aparece se o arquivo existir (checado por `HEAD`). Basta subir o mp4
+  com esse nome, sem mexer em código.
+- `sw.js` v2: `.mp4/.webm/.mov` e pedidos com `Range` passam direto, sem cache
+  (resposta 206 não entra no Cache Storage, e o vídeo não precisa funcionar offline).
+
 ## Roadmap — notificação via n8n (não construído ainda, de propósito)
 
 Toda mudança de status já grava em `post_events`. Plugar n8n + Evolution é só apontar
