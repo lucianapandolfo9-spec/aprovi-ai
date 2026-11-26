@@ -551,6 +551,23 @@ mostra uma faixa no topo do feed com o passo a passo do aparelho detectado:
 - `sw.js` v2: `.mp4/.webm/.mov` e pedidos com `Range` passam direto, sem cache
   (resposta 206 não entra no Cache Storage, e o vídeo não precisa funcionar offline).
 
+## 🟣 Identidade da Lotta (26/11/2026)
+
+O aprovi.ai passa a ser mais da **Lotta** (empresa da Luciana) do que só dela. O nome
+continua aprovi.ai; o visual inteiro segue a Lotta:
+
+- **Ícone/favicon:** o mesmo do site agencialotta.com.br (quadrado roxo `#680076`, "L"
+  branco, ponto amarelo `#FFD000`). Fonte: `assets/lotta.svg`; `lotta-square.svg` (iPhone,
+  sem canto, o iOS arredonda) e `lotta-maskable.svg` (Android, conteúdo a 70% pra caber na
+  zona segura). PNGs gerados pelo Chrome headless. O panda saiu do repo.
+- **Cores:** tokens do design system do site (`--lt-*`), mapeados no `:root` do `style.css`.
+  Roxo `#68006f`/`#7a00d6`, amarelo `#ffd600` (no lugar do laranja), fundo `#0b0215`,
+  superfície `#1a0731`, borda `#3d1a6b`. `--laranja` virou `--amarelo`.
+- **Fonte:** Montserrat (a do site), pelo Google Fonts. `button/input/textarea` herdam.
+- `sw.js` v3 pra trocar o cache do shell. **App já instalado no iPhone continua com o
+  ícone antigo** até remover e instalar de novo (o iOS não atualiza ícone de Tela de
+  Início). No Android o Chrome atualiza sozinho em alguns dias.
+
 ## Roadmap — notificação via n8n (não construído ainda, de propósito)
 
 Toda mudança de status já grava em `post_events`. Plugar n8n + Evolution é só apontar

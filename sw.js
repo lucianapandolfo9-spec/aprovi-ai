@@ -14,7 +14,7 @@
  * `?t=<secret_token>` do cliente.html nunca é persistido no Cache Storage.
  */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = 'aprovi-shell-' + VERSION;
 
 const SHELL = [
@@ -27,7 +27,7 @@ const SHELL = [
   './manifest-cliente.webmanifest',
   './assets/favicon.svg',
   './assets/favicon-32.png',
-  './assets/panda.svg',
+  './assets/lotta.svg',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/apple-touch-icon.png'
