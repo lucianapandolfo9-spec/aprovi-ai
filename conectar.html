@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Conectando conta — aprovi.ai</title>
+<link rel="icon" href="favicon.ico">
+<style>
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:#faf8f5; color:#120a1c;
+         font:16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .card { max-width:420px; padding:32px; text-align:center; }
+  img { width:56px; height:56px; border-radius:14px; }
+  h1 { font-size:22px; margin:16px 0 8px; }
+  p { color:#5b5466; margin:0 0 16px; }
+  a { color:#6b2fbf; }
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="assets/icon-192.png" alt="">
+  <h1 id="titulo">Conectando…</h1>
+  <p id="msg">Só um instante.</p>
+  <a id="voltar" href="./" hidden>Voltar ao painel</a>
+</div>
+<script src="config.js"></script>
+<script>
+(async () => {
+  const q = new URLSearchParams(location.search);
+  const titulo = document.getElementById("titulo");
+  const msg = document.getElementById("msg");
+  const voltar = document.getElementById("voltar");
+  // tira code e state da barra de endereço (e do histórico) na hora
+  history.replaceState(null, "", location.pathname);
+
+  const fim = (t, m) => { titulo.textContent = t; msg.textContent = m; voltar.hidden = false; };
+
+  if (q.get("error")) {
+    return fim("Conexão cancelada", "A rede não autorizou: " + (q.get("error_description") || q.get("error")));
+  }
+  const code = q.get("code"), state = q.get("state");
+  const rede = q.get("rede") || "tiktok";
+  if (!code || !state) return fim("Link incompleto", "Abra a conexão de novo pelo painel.");
+
+  try {
+    const r = await fetch(POSTA_AI_SUPABASE_URL + "/functions/v1/oauth-redes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + POSTA_AI_SUPABASE_ANON_KEY,
+        "apikey": POSTA_AI_SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ acao: "concluir", rede, code, state }),
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) return fim("Não deu certo", j.erro || "Tente conectar de novo pelo painel.");
+    const nome = j.conta && j.conta.apelido ? " (" + j.conta.apelido + ")" : "";
+    fim("Conta conectada", "O " + (rede === "tiktok" ? "TikTok" : "YouTube") + nome + " já está ligado ao aprovi.ai.");
+  } catch (e) {
+    fim("Não deu certo", "Falha de rede. Tente de novo pelo painel.");
+  }
+})();
+</script>
+</body>
+</html>
