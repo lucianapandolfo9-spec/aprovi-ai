@@ -185,3 +185,30 @@ video{width:100%;border-radius:10px;background:#000;display:block;}
   .actions .btn{flex:1 1 100%;padding:14px 16px;font-size:15px;}
   .pending-post{margin-bottom:22px;}
 }
+
+/* =====================================================================
+   TUTORIAL "INSTALAR NO CELULAR" — faixa no topo do feed do cliente.
+   Só aparece no celular e fora do app instalado (lógica no cliente.html).
+   ===================================================================== */
+.instalar{margin-bottom:24px;border-color:rgba(255,107,53,.45);
+  background:linear-gradient(160deg,rgba(255,107,53,.10),rgba(111,46,143,.18) 60%),var(--card);}
+.instalar-topo{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px;}
+.instalar-topo img{border-radius:11px;flex:0 0 auto;}
+.instalar-topo h4{margin:2px 0 4px;font-size:16px;}
+.instalar-topo p{margin:0;line-height:1.4;}
+.instalar-aviso{background:#3A2E14;color:#F1D18A;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.45;margin-bottom:12px;}
+.instalar-cta{width:100%;padding:14px 16px;font-size:15px;}
+.instalar-ou{text-align:center;margin:10px 0 2px;font-size:12px;}
+.instalar-passos{margin:8px 0 14px;padding-left:22px;line-height:1.5;font-size:14px;}
+.instalar-passos li{margin-bottom:8px;padding-left:2px;}
+.instalar-passos .ico{display:inline-block;padding:0 6px;border:1px solid var(--card-borda);border-radius:6px;font-size:12px;}
+.instalar-acoes{display:flex;gap:10px;flex-wrap:wrap;}
+.instalar-acoes .btn{flex:1 1 160px;}
+.instalar-fechar{background:transparent;color:var(--texto-suave);}
+.instalar-link{text-align:center;margin-top:28px;}
+.instalar-link button{background:none;border:none;color:var(--laranja);font:inherit;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px;}
+.instalar-modal{position:fixed;inset:0;z-index:60;background:rgba(10,4,14,.86);
+  display:flex;align-items:center;justify-content:center;
+  padding:calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));}
+.instalar-modal-box{width:min(380px,100%);}
+.instalar-modal video{width:100%;max-height:78vh;border-radius:14px;background:#000;display:block;}

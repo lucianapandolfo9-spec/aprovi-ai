@@ -14,7 +14,7 @@
  * `?t=<secret_token>` do cliente.html nunca é persistido no Cache Storage.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE = 'aprovi-shell-' + VERSION;
 
 const SHELL = [
@@ -75,6 +75,10 @@ self.addEventListener('fetch', (event) => {
   // Cinto e suspensório: mesmo que um dia o Supabase passe a servir de um
   // domínio próprio apontado pra cá, nada com cara de API é cacheado.
   if (/supabase|\/rest\/|\/auth\/|\/storage\//.test(url.pathname)) return;
+
+  // Vídeo (tutorial de instalar) e pedido com Range passam direto: o player
+  // pede pedaços (resposta 206), que o Cache Storage nem aceita guardar.
+  if (/\.(mp4|webm|mov)$/i.test(url.pathname) || req.headers.has('range')) return;
 
   event.respondWith((async () => {
     const cache = await caches.open(SHELL_CACHE);
