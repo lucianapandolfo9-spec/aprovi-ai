@@ -4,7 +4,7 @@ Aprovação e publicação automática de conteúdo social. A editora sobe o ví
 escreve a legenda; o cliente aprova por um link secreto, sem login; o sistema
 publica sozinho no Instagram na hora marcada.
 
-Ferramenta interna da [Luh Panda](https://luhpanda.com.br). Não é vendida como
+Ferramenta interna da **Lotta** e da [Luh Panda](https://luhpanda.com.br). Não é vendida como
 produto — decisão de 11/set/2026, registrada no `PROJETO.md`. Isso muda a
 prioridade: vale o que reduz trabalho manual, não o que deixaria vendável.
 
@@ -377,7 +377,7 @@ nunca foi exercitado de ponta a ponta com a Meta.
 
 ## Ferramentas de operador (vivem fora deste repo)
 
-`subir-midia.sh`, em `~/.claude/skills/lymphatic-by-gigi/`, chama
+`subir-midia.sh`, em `~/.claude/skills/aprovi-ai-postagem-automatica/`, chama
 `emitir-url-upload` e sobe um arquivo. Fica fora do repo de propósito: tem o
 project-ref de produção embutido e lê o segredo de um arquivo local com
 `chmod 600`. Script apontando pra produção dentro de repo público seria um
