@@ -1,4 +1,7 @@
-// aprovi.ai — publicação automática (Instagram + Página do Facebook).
+// aprovi.ai — publicação automática (Instagram + Página do Facebook + TikTok).
+//
+// v22 (26/11/2026): canal tiktok com caminho próprio (processarJobRede + ./tiktok.ts), em 2
+// execuções (envia → confirma). Instagram/Facebook seguem o caminho da v21 sem mudança.
 //
 // v21 (06/10/2026, fase "Certo Agro no aprovi.ai"): passa a publicar POR
 // CANAL. Cada post vira um lote de jobs em posta_ai.publish_jobs, um por
@@ -37,7 +40,76 @@ import {
   publicarNoInstagram,
 } from "./meta.ts";
 
+import { conferirEnvio, enviarVideo, renovarToken, TIKTOK_API_PADRAO } from "./tiktok.ts";
+
 const MAX_JOBS_POR_EXECUCAO = 1;
+const TIKTOK_API = Deno.env.get("TIKTOK_API_BASE") || TIKTOK_API_PADRAO;
+
+// deno-lint-ignore no-explicit-any
+type Supa = any;
+
+// Um job de tiktok/youtube. Nunca lança: tudo vira resultado gravado no banco.
+async function processarJobRede(supabase: Supa, jobId: string, postId: string, canal: string) {
+  const falhar = async (erro: string) => {
+    const m = await supabase.rpc("rpc_marcar_resultado_job_rede", {
+      p_job_id: jobId, p_sucesso: false, p_erro: erro,
+    });
+    return { post_id: postId, canal, status: "falhou", erro, post_status: m.data, rpc_erro: m.error?.message };
+  };
+
+  const { data: d, error } = await supabase.rpc("rpc_dados_job_rede", { p_job_id: jobId });
+  if (error || !d) return await falhar(`rpc_dados_job_rede: ${error?.message ?? "vazio"}`);
+
+  if (canal === "youtube") {
+    return await falhar("YouTube ainda nao implementado no publicador");
+  }
+
+  try {
+    // token de 24 h: renova se faltar menos de 10 min
+    let access = d.access_token as string;
+    if (!d.expira_em || new Date(d.expira_em).getTime() < Date.now() + 10 * 60 * 1000) {
+      if (!d.refresh_token) throw new Error("token do TikTok vencido e sem refresh: reconectar a conta");
+      const t = await renovarToken(
+        TIKTOK_API, Deno.env.get("TIKTOK_CLIENT_KEY")!, Deno.env.get("TIKTOK_CLIENT_SECRET")!, d.refresh_token,
+      );
+      const agora = Date.now();
+      const u = await supabase.rpc("rpc_atualizar_tokens_rede", {
+        p_conta_rede_id: d.conta_rede_id,
+        p_access_token: t.access_token,
+        p_refresh_token: t.refresh_token,
+        p_expira_em: new Date(agora + t.expires_in * 1000).toISOString(),
+        p_refresh_expira_em: new Date(agora + t.refresh_expires_in * 1000).toISOString(),
+      });
+      if (u.error) throw new Error(`token renovado mas nao gravado: ${u.error.message}`);
+      access = t.access_token;
+    }
+
+    if (d.etapa !== "confirmar") {
+      // fase 1: envia o arquivo e devolve o job para a fila
+      const r = await enviarVideo(TIKTOK_API, { ...d, access_token: access });
+      const m = await supabase.rpc("rpc_job_aguardar_confirmacao", { p_job_id: jobId, p_externo_id: r.publishId });
+      return { post_id: postId, canal, status: "enviado", publish_id: r.publishId, fila: m.data, rpc_erro: m.error?.message };
+    }
+
+    // fase 2: confirma
+    const s = await conferirEnvio(TIKTOK_API, access, d.externo_id, d.modo, d.opcoes_tiktok?.privacy_level ?? null);
+    if (s.estado === "processando") {
+      const m = await supabase.rpc("rpc_job_aguardar_confirmacao", { p_job_id: jobId, p_externo_id: d.externo_id });
+      return { post_id: postId, canal, status: "processando", fila: m.data };
+    }
+    if (s.estado === "falhou") return await falhar(s.motivo);
+
+    const m = await supabase.rpc("rpc_marcar_resultado_job_rede", {
+      p_job_id: jobId,
+      p_sucesso: true,
+      p_externo_id: s.postId ?? d.externo_id,
+      p_visibilidade: s.visibilidade,
+    });
+    return { post_id: postId, canal, status: "concluido", visibilidade: s.visibilidade, post_status: m.data, rpc_erro: m.error?.message };
+  } catch (e) {
+    return await falhar(String(e instanceof Error ? e.message : e));
+  }
+}
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -63,6 +135,12 @@ Deno.serve(async (_req) => {
     }
 
     const { job_id, post_id, canal, conta_id, token, caption, media_type } = linha;
+
+    // v22: TikTok (e, depois, YouTube) têm caminho próprio. Instagram/Facebook seguem abaixo, intactos.
+    if (canal === "tiktok" || canal === "youtube") {
+      resultados.push(await processarJobRede(supabase, job_id, post_id, canal));
+      continue;
+    }
 
     let assets: Asset[] = [];
     try {
