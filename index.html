@@ -347,7 +347,12 @@ function copyLink(link){
 async function loadPosts(){
   const kanbanEl = document.getElementById('kanban');
   kanbanEl.innerHTML = `<div class="empty"><div class="spinner" style="margin:0 auto;"></div></div>`;
-  const { data, error } = await postaAiClient.rpc('posta_ai_admin_list_posts', { p_brand_id: currentBrand.id });
+  const [{ data, error }, canais] = await Promise.all([
+    postaAiClient.rpc('posta_ai_admin_list_posts', { p_brand_id: currentBrand.id }),
+    postaAiClient.rpc('posta_ai_admin_canais_posts', { p_brand_id: currentBrand.id }),
+  ]);
+  canaisPorPost = {};
+  (canais.data || []).forEach(c => { canaisPorPost[c.post_id] = c; });
   if(error){ kanbanEl.innerHTML = `<div class="empty">Erro: ${esc(error.message)}</div>`; return; }
 
   const cols = [
@@ -379,12 +384,67 @@ function postCard(p){
     <h4>${esc(p.titulo_interno||'Sem título')}</h4>
     <div class="muted" style="font-size:12px;max-height:60px;overflow:hidden;">${esc((p.legenda_atual||'').slice(0,140))}</div>
     ${comments}
+    <div class="canais-card" id="canais-${p.id}">${chipsCanais(p)}</div>
     <div class="row" style="margin-top:8px;">
       <button class="btn btn-outline" style="flex:1;" onclick="openPostDetail('${p.id}')">Abrir</button>
       <button class="btn btn-outline" style="padding:10px 12px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeletePost('${p.id}')" title="Excluir">🗑</button>
     </div>
     ${actions}
   </div>`;
+}
+
+// ---------- REDES POR POST (27/11/2026, decisão D7) ----------
+// Antes de sair: cada rede da marca é um botão liga/desliga (a cliente também pode mexer no link).
+// Depois de sair: mostra o resultado por rede (o TikTok sem auditoria cai no rascunho do app).
+var canaisPorPost = {};
+const CURTO = { instagram:'IG', facebook:'FB', tiktok:'TikTok', youtube:'YouTube' };
+
+function chipsCanais(p){
+  const c = canaisPorPost[p.id];
+  if(!c) return '';
+  const res = c.resultados || {};
+  const saiu = p.status === 'publicando' || p.status === 'publicado' || p.status === 'falhou';
+  const chip = (txt, cor, fundo, extra='') =>
+    `<span class="tag" style="background:${fundo};color:${cor};margin:2px 4px 2px 0;${extra}">${txt}</span>`;
+
+  if(saiu){
+    const canaisRes = Object.keys(res);
+    if(!canaisRes.length) return '';
+    return `<div style="margin-top:8px;">` + canaisRes.map(k => {
+      const r = res[k] || {};
+      if(r.status === 'publicado' && r.visibilidade === 'rascunho') return chip(`${CURTO[k]||k}: no rascunho do app`, '#ffd600', '#3a3105');
+      if(r.status === 'publicado') return chip(`${CURTO[k]||k} ✓`, '#7FD858', '#1D3A12');
+      if(r.status === 'falhou') return chip(`${CURTO[k]||k}: falhou`, '#ff7a93', '#3d0f1c');
+      return chip(`${CURTO[k]||k}: enviando…`, '#4EB4E7', '#122B3A');
+    }).join('') + `</div>`;
+  }
+
+  const possiveis = c.canais_possiveis || [];
+  if(!possiveis.length){
+    return `<div style="margin-top:8px;">${chip('sem rede ligada na marca', '#ff7a93', '#3d0f1c')}</div>`;
+  }
+  const desl = c.canais_desligados || [];
+  return `<div style="margin-top:8px;"><span class="muted" style="font-size:11px;">Sai em:</span> ` + possiveis.map(k => {
+    const on = !desl.includes(k);
+    return `<button type="button" title="${on ? 'Clique para não postar aqui' : 'Clique para postar aqui'}" onclick="alternarCanalPost('${p.id}','${k}')"
+      style="border:0;cursor:pointer;padding:0;background:none;">${on
+        ? chip((CURTO[k]||k) + ' ✓', '#7FD858', '#1D3A12')
+        : chip(CURTO[k]||k, '#9a9a9a', '#2a2a2a', 'text-decoration:line-through;')}</button>`;
+  }).join('') + `</div>`;
+}
+
+async function alternarCanalPost(postId, canal){
+  const c = canaisPorPost[postId];
+  if(!c) return;
+  const desl = new Set(c.canais_desligados || []);
+  desl.has(canal) ? desl.delete(canal) : desl.add(canal);
+  if((c.canais_possiveis || []).every(k => desl.has(k))){ toast('Deixe pelo menos uma rede marcada'); return; }
+  const novo = [...desl];
+  const { error } = await postaAiClient.rpc('posta_ai_admin_set_canais_post', { p_post_id: postId, p_desligados: novo });
+  if(error){ toast('Erro: ' + error.message); return; }
+  c.canais_desligados = novo;
+  const el = document.getElementById('canais-' + postId);
+  if(el && postsById[postId]) el.innerHTML = chipsCanais(postsById[postId]);
 }
 
 // ---------- EXCLUIR (qualquer status) ----------
