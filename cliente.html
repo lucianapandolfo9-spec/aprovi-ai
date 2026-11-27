@@ -165,7 +165,12 @@ async function loadFeed(){
       : `<div class="empty">Link inválido. Peça o link certo pra Luciana.</div>`;
     return;
   }
-  const { data, error } = await postaAiClient.rpc('posta_ai_client_feed', { p_token: TOKEN });
+  const [{ data, error }, canais] = await Promise.all([
+    postaAiClient.rpc('posta_ai_client_feed', { p_token: TOKEN }),
+    postaAiClient.rpc('posta_ai_client_canais_posts', { p_token: TOKEN }),
+  ]);
+  CANAIS_POST = {};
+  (canais.data || []).forEach(c => { CANAIS_POST[c.post_id] = c; });
   if(error){
     appEl.innerHTML = `<div class="empty">Não consegui abrir seu conteúdo. Esse link pode ter expirado — pede um novo pra Luciana.</div>`;
     return;
@@ -309,6 +314,7 @@ function postCard(p){
       <textarea class="caption-field">${esc(p.legenda_atual)}</textarea>
       <div class="muted" style="font-size:12px;margin-top:4px;">Só mudou o texto? Edite aqui em cima e clique em Aprovar — fica aprovado na hora, não precisa pedir nada.</div>
     </div>
+    ${blocoCanais(p)}
     ${comments ? `<div style="margin-bottom:12px;">${comments}</div>` : ''}
     <div class="field">
       <label>${fi.label}</label>
@@ -319,6 +325,47 @@ function postCard(p){
       <button class="btn btn-adjust" onclick="decide('${p.id}','ajuste_pedido',this)">${fi.botao}</button>
     </div>
   </div>`;
+}
+
+// ---------- ONDE VAI SAIR (27/11/2026, decisão D7) ----------
+// A cliente vê as redes que a marca usa, já marcadas, e pode desmarcar. Grava na hora.
+var CANAIS_POST = {};  // var: loadFeed pode rodar antes desta linha
+const NOME_CANAL = { instagram:'Instagram', facebook:'Facebook', tiktok:'TikTok', youtube:'YouTube' };
+
+function blocoCanais(p){
+  const c = CANAIS_POST[p.id];
+  if(!c || !(c.canais_possiveis || []).length) return '';
+  const possiveis = c.canais_possiveis, desl = c.canais_desligados || [];
+  if(possiveis.length === 1){
+    return `<div class="field"><label>Onde vai sair</label><div class="muted">${NOME_CANAL[possiveis[0]] || possiveis[0]}</div></div>`;
+  }
+  return `<div class="field canais-post">
+    <label>Onde vai sair (desmarque o que não quiser)</label>
+    <div class="row" style="gap:14px;flex-wrap:wrap;">
+      ${possiveis.map(k => `<label style="display:flex;align-items:center;gap:6px;text-transform:none;font-weight:600;margin:0;cursor:pointer;">
+        <input type="checkbox" data-canal="${k}" ${desl.includes(k) ? '' : 'checked'} onchange="mudarCanais('${p.id}', this)"> ${NOME_CANAL[k] || k}
+      </label>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function mudarCanais(postId, cb){
+  const card = document.querySelector(`.pending-post[data-id="${postId}"]`);
+  const caixas = [...card.querySelectorAll('.canais-post input[type=checkbox]')];
+  const desligados = caixas.filter(x => !x.checked).map(x => x.dataset.canal);
+  if(desligados.length === caixas.length){
+    cb.checked = true;
+    toast('Deixe pelo menos uma rede marcada.');
+    return;
+  }
+  const { error } = await postaAiClient.rpc('posta_ai_client_set_canais_post', { p_token: TOKEN, p_post_id: postId, p_desligados: desligados });
+  if(error){
+    cb.checked = !cb.checked;
+    toast('Não consegui salvar, tenta de novo.');
+    return;
+  }
+  if(CANAIS_POST[postId]) CANAIS_POST[postId].canais_desligados = desligados;
+  toast('Redes atualizadas');
 }
 
 async function decide(postId, decisao, btn){
