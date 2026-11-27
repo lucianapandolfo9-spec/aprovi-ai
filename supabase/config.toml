@@ -28,3 +28,8 @@ verify_jwt = true
 # true: o pg_cron chama com a ANON key, igual ao publicador. A regra do que
 # apagar mora no banco (rpc_midia_expirada, piso de 30 dias), não aqui.
 verify_jwt = true
+
+[functions.oauth-redes]
+# true: o front (conectar.html e painel) manda a ANON key só pra passar o portão.
+# A autorização real é o state de uso único criado por admin (posta_ai_admin_iniciar_conexao).
+verify_jwt = true

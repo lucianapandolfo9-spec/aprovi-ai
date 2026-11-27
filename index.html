@@ -181,7 +181,115 @@ function renderBrandPanel(){
           <button class="btn btn-outline" style="padding:6px 10px;color:var(--vermelho);border-color:var(--vermelho);" onclick="confirmDeleteBrand()">Excluir marca</button>
         </div>
       </div>
+    </div>
+    <div class="card" style="margin-bottom:20px;" id="canais-box">
+      <label>Onde esta marca posta</label>
+      <div class="muted">Carregando canais…</div>
     </div>`;
+  loadCanais();
+}
+
+// ---------- CANAIS DE POSTAGEM POR MARCA (27/11/2026) ----------
+// A fila só publica no canal que está CONECTADO e LIGADO aqui.
+// TikTok e YouTube só recebem reel (story e foto ficam no Instagram/Facebook).
+const CANAIS = [
+  { id:'instagram', nome:'Instagram',          meta:true },
+  { id:'facebook',  nome:'Página do Facebook', meta:true },
+  { id:'tiktok',    nome:'TikTok',             meta:false, so:'só reel' },
+  { id:'youtube',   nome:'YouTube Shorts',     meta:false, so:'só reel' },
+];
+
+async function loadCanais(){
+  const b = currentBrand;
+  const box = document.getElementById('canais-box');
+  if(!box) return;
+  const [m, r] = await Promise.all([
+    postaAiClient.rpc('posta_ai_admin_canais_meta', { p_brand_id: b.id }),
+    postaAiClient.rpc('posta_ai_admin_contas_rede', { p_brand_id: b.id }),
+  ]);
+  if(currentBrand?.id !== b.id) return; // trocou de marca no meio
+  if(m.error || r.error){
+    box.innerHTML = `<label>Onde esta marca posta</label><div class="muted">Não consegui ler os canais: ${esc((m.error||r.error).message)}</div>`;
+    return;
+  }
+  const meta = (m.data && m.data[0]) || {};
+  const redes = r.data || [];
+
+  const linhas = CANAIS.map(c => {
+    let conectado, ligado, detalhe = '', acao = '';
+    if(c.meta){
+      conectado = c.id === 'instagram' ? !!meta.tem_instagram : !!meta.tem_facebook;
+      ligado = conectado && (c.id === 'instagram' ? !!meta.publicar_instagram : !!meta.publicar_facebook);
+      if(conectado){
+        acao = `<button class="btn btn-outline" style="padding:4px 10px;" onclick="ajustarCanalMeta('${c.id}', ${!ligado})">${ligado ? 'Desligar' : 'Ligar'}</button>`;
+      } else {
+        detalhe = 'conecta pelo token da Meta (passo a passo na skill do aprovi.ai)';
+      }
+    } else {
+      const conta = redes.find(x => x.rede === c.id && x.ativo);
+      conectado = !!conta;
+      ligado = conectado && conta.publicar_por_padrao;
+      if(conectado){
+        detalhe = [conta.apelido ? '@' + conta.apelido : '', conta.modo === 'rascunho' ? 'cai no rascunho do app' : 'publica direto', c.so].filter(Boolean).join(' · ');
+        acao = `<button class="btn btn-outline" style="padding:4px 10px;" onclick="ajustarCanalRede('${conta.id}', ${!ligado})">${ligado ? 'Desligar' : 'Ligar'}</button>`;
+      } else if(c.id === 'tiktok'){
+        acao = `<button class="btn btn-outline" style="padding:4px 10px;" onclick="conectarRede('tiktok')">Conectar</button>`;
+        detalhe = c.so;
+      } else {
+        detalhe = 'em construção';
+      }
+    }
+    const tag = !conectado
+      ? `<span class="tag" style="background:#2a2a2a;color:#9a9a9a;">não usa</span>`
+      : ligado
+        ? `<span class="tag tag-publicado">posta aqui</span>`
+        : `<span class="tag tag-em_aprovacao">conectado, desligado</span>`;
+    return `<div class="row-between" style="padding:8px 0;border-top:1px solid rgba(255,255,255,.06);gap:12px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;"><b>${c.nome}</b> ${tag}${detalhe ? `<div class="muted" style="margin-top:2px;">${esc(detalhe)}</div>` : ''}</div>
+      <div>${acao}</div>
+    </div>`;
+  }).join('');
+
+  const ativos = CANAIS.filter(c =>
+    c.meta ? (c.id === 'instagram' ? meta.tem_instagram && meta.publicar_instagram : meta.tem_facebook && meta.publicar_facebook)
+           : redes.some(x => x.rede === c.id && x.ativo && x.publicar_por_padrao)
+  ).map(c => c.nome);
+
+  box.innerHTML = `<label>Onde esta marca posta</label>
+    <div class="muted" style="margin-bottom:6px;">${ativos.length
+      ? 'Todo post aprovado sai em: <b>' + esc(ativos.join(' + ')) + '</b>.'
+      : '<span style="color:var(--vermelho);">Nenhum canal ligado: post aprovado desta marca vai falhar.</span>'}</div>
+    ${linhas}`;
+}
+
+async function ajustarCanalMeta(canal, ligado){
+  const { error } = await postaAiClient.rpc('posta_ai_admin_ajustar_canal_meta', { p_brand_id: currentBrand.id, p_canal: canal, p_ligado: ligado });
+  if(error){ toast('Erro: ' + error.message); return; }
+  toast(ligado ? 'Canal ligado' : 'Canal desligado');
+  loadCanais();
+}
+
+async function ajustarCanalRede(contaId, ligado){
+  const { error } = await postaAiClient.rpc('posta_ai_admin_ajustar_conta_rede', { p_conta_rede_id: contaId, p_publicar_por_padrao: ligado, p_modo: null, p_ativo: null });
+  if(error){ toast('Erro: ' + error.message); return; }
+  toast(ligado ? 'Canal ligado' : 'Canal desligado');
+  loadCanais();
+}
+
+// Abre a autorização da rede. A volta cai em conectar.html, que conclui e guarda o token.
+async function conectarRede(rede){
+  const { data: state, error } = await postaAiClient.rpc('posta_ai_admin_iniciar_conexao', { p_brand_id: currentBrand.id, p_rede: rede });
+  if(error || !state){ toast('Erro: ' + (error?.message || 'sem state')); return; }
+  try {
+    const r = await fetch(POSTA_AI_SUPABASE_URL + '/functions/v1/oauth-redes', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer ' + POSTA_AI_SUPABASE_ANON_KEY, 'apikey': POSTA_AI_SUPABASE_ANON_KEY },
+      body: JSON.stringify({ acao:'url', rede, state }),
+    });
+    const j = await r.json();
+    if(!r.ok || !j.url){ toast('Erro: ' + (j.erro || r.status)); return; }
+    location.href = j.url;
+  } catch(e){ toast('Erro: ' + e.message); }
 }
 
 // ---------- EXCLUIR MARCA (destrutivo — apaga tudo dela) ----------
